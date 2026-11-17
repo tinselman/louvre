@@ -162,3 +162,26 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
   reloads; drop it next publish. One 503 from Pages in the first minute after the push (gone on retry).
 - `node tools/requests.mjs <url> "x,z,yaw,pitch,floor"` lists any request at that spot that comes back 400+.
 - Still on studio: `.github/workflows/pictures.yml` (harmless; delete it on github.com — see above).
+
+## Squared pictures (2026-11-17, his "some of the works on the walls are not squared. they look like someone took a bad photo")
+- Many Commons pictures are visitors' photos (Sailko's above all): taken from the side, with the frame and the wall
+  in them. `tools/square.py` finds the painting's outline in each and cuts it out straight, at the work's own
+  proportions (w × h in works.json).
+- Which: only files that name a consumer camera (Canon, Fujifilm, Nikon, phones…) in their EXIF —
+  `tools/commons_meta.py` → source/commons-meta.json (55 API requests, the site-named User-Agent). Museum scans
+  (Google Art Project, Leaf backs, no camera) are square already, and the finder's straight lines there were the
+  painting's own (a table, a door, a column) — never touch them.
+- How (`find`): OpenCV's line-segment detector; the long lines near each side, grouped; every choice of one line a
+  side (or the photo's edge) where at least 3 sides are lines (a frame shows all round; a line in the painting on one
+  or two). The outline whose proportions match the record wins; among near-equals the innermost (the sight edge, not
+  the outer moulding). Then straightened and looked at again, up to 4 times — a deep gold frame (the Corots) has
+  several mouldings and the paint starts inside the last.
+- 199 found; all looked at on contact sheets. 7 left as they are (SKIP: altarpieces whose border is part of the
+  work, already-straight photos); 9 outlined by hand (HAND: Banquet of Herod, the middle one of three on a wall,
+  Old Man with a Toque, the arched Coronation, and five where the finder stopped at an outer moulding — snapped to
+  the nearest edge, or exactly as given with snap False). An arched or oval painting keeps its gold corners.
+- `apply`: fetches the 1920 px picture once (the outline cut from it keeps its detail), straightens it, writes
+  art/<id>-l.jpg (the close-up view's picture, now local), -m and -s; images.json gets the new px, colour and l.
+  The photos as they were stay in source/art-orig/ (not committed — run `apply` again from them).
+- `node tools/facing.mjs <dir> <id> …` stands in front of paintings and saves a picture of each (headless).
+- Not looked at: camera photos the finder found no outline in (a frame on fewer than 3 sides).

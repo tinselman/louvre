@@ -8,3 +8,5 @@ source/*.log
 source/works-preview.json
 public/art/*-raw
 shots/
+# the visitors' photos as they were, before tools/square.py straightened them (kept here to run it again)
+source/art-orig/
