@@ -23,6 +23,20 @@ import { resting } from './rest';
 
 declare global { interface Window { __gReady?: boolean; __g?: unknown } }
 
+declare const __BUILD__: string;
+/* A browser may keep the page for a while after a publish (GitHub lets it, for 10 minutes), and with it the old code:
+   if a newer build is out, load that instead (once, so it can never go round and round) — as in the Portrait gallery */
+if (!import.meta.env.DEV) {
+  fetch(`version.json?${Date.now()}`, { cache: 'no-store' }).then((r) => r.json()).then((v: { build?: string }) => {
+    if (!v.build || v.build === __BUILD__) return;
+    try {
+      if (sessionStorage.getItem('louvre:fresh') === v.build) return;
+      sessionStorage.setItem('louvre:fresh', v.build);
+    } catch { return; }
+    location.reload();
+  }).catch(() => {});
+}
+
 const params = new URLSearchParams(location.search);
 const touchOnly = (matchMedia('(hover: none) and (pointer: coarse)').matches && !params.has('desk')) || params.has('touch');
 
