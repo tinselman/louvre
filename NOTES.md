@@ -69,3 +69,6 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
 - The Mona Lisa's rail stops the visitor but not the view (`arch.sight` for the fade, `arch.solids` for walking).
 - Pictures not yet downloaded load straight from Commons in the page (`cpath` = md5 folder; Commons sends CORS *).
 - 623 paintings hung (all pictured Louvre records read); check.mjs PASS.
+- All 10,427 Wikidata paintings with a Louvre ARK read (2026-11-16 evening). In the rooms built: 623 hung, 35 left out
+  for want of a public-domain picture, 1 for want of a size (paintings the Louvre has that Wikidata doesn't know aren't
+  counted at all).

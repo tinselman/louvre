@@ -7226,5 +7226,135 @@
 2470,
 3049
 ]
+},
+"010063600": {
+"px": [
+960,
+711
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/1/14/Paolo_Porpora_-_Still-Life_with_an_Owl_and_an_Ibis_-_WGA18171.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#3c2f1d",
+"file": "Paolo Porpora - Still-Life with an Owl and an Ibis - WGA18171.jpg",
+"size": [
+1080,
+800
+]
+},
+"010063049": {
+"px": [
+960,
+1017
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/c/cb/Francisco_de_Herrera_%28I%29_-_St_Bonaventura_Receiving_the_Host_from_the_Hands_of_an_Angel_-_WGA11373.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#564129",
+"file": "Francisco de Herrera (I) - St Bonaventura Receiving the Host from the Hands of an Angel - WGA11373.jpg",
+"size": [
+1000,
+1059
+]
+},
+"010064947": {
+"px": [
+941,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Saint_Bonaventure_au_concile_de_Lyon%2C_par_Francisco_de_Zurbar%C3%A1n.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#655a4e",
+"file": "Saint Bonaventure au concile de Lyon, par Francisco de Zurbar\u00e1n.jpg",
+"size": [
+1378,
+1500
+]
+},
+"010064731": {
+"px": [
+500,
+621
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/5/57/Francisco_de_Herrera_%28I%29_-_St_Basil_Dictating_His_Doctrine_-_WGA11378.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#61514e",
+"file": "Francisco de Herrera (I) - St Basil Dictating His Doctrine - WGA11378.jpg",
+"size": [
+900,
+1117
+]
+},
+"010064780": {
+"px": [
+789,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/0/05/Saint_Paul_ermite%2C_par_Jos%C3%A9_de_Ribera.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#4e463a",
+"file": "Saint Paul ermite, par Jos\u00e9 de Ribera.jpg",
+"size": [
+1156,
+1500
+]
+},
+"010059547": {
+"px": [
+582,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ad/El_patizambo%2C_por_Jos%C3%A9_de_Ribera.jpg/1920px-El_patizambo%2C_por_Jos%C3%A9_de_Ribera.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#6a6356",
+"file": "El patizambo, por Jos\u00e9 de Ribera.jpg",
+"size": [
+2272,
+4000
+]
+},
+"010060879": {
+"px": [
+844,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/14/Bartolom%C3%A9_Esteban_Murillo_-_Joven_mendigo_%281645-50%29.jpg/1920px-Bartolom%C3%A9_Esteban_Murillo_-_Joven_mendigo_%281645-50%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#4f432f",
+"file": "Bartolom\u00e9 Esteban Murillo - Joven mendigo (1645-50).jpg",
+"size": [
+3225,
+3913
+]
+},
+"010064490": {
+"px": [
+960,
+996
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/f/f3/Still-Life_with_Oysters_and_Quinces_-_Giuseppe_Recco_-_Louvre_RF_1977-11.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#23201f",
+"file": "Still-Life with Oysters and Quinces - Giuseppe Recco - Louvre RF 1977-11.jpg",
+"size": [
+1806,
+1873
+]
+},
+"010059535": {
+"px": [
+960,
+715
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/7f/Still-Life_with_Grapes_and_Figs_-_Giuseppe_Ruoppolo_-_MI_864.jpg/1920px-Still-Life_with_Grapes_and_Figs_-_Giuseppe_Ruoppolo_-_MI_864.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#24242b",
+"file": "Still-Life with Grapes and Figs - Giuseppe Ruoppolo - MI 864.jpg",
+"size": [
+2615,
+1948
+]
+},
+"010059544": {
+"px": [
+960,
+732
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/00/Still-Life_with_Grapes_and_Apples_-_Giuseppe_Ruoppolo_-_MI_865.jpg/1920px-Still-Life_with_Grapes_and_Apples_-_Giuseppe_Ruoppolo_-_MI_865.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#1f2029",
+"file": "Still-Life with Grapes and Apples - Giuseppe Ruoppolo - MI 865.jpg",
+"size": [
+2307,
+1760
+]
 }
 }
