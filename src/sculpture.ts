@@ -17,11 +17,13 @@ export interface Sculpture {
   room: string;                                // the Louvre's room
   floor: number;
   place: { x: number; z: number; yaw: number }; // where it stands (yaw: the way it faces, degrees; 0 = north)
-  height: number;                              // overall, metres (the Louvre's)
+  height: number;                              // overall, metres (the Louvre's; on the label)
+  scanHeight: number;                          // the scanned piece's own height, metres
   w: number; depth: number;                    // its footprint
   model: string;                               // public/models/…
-  /** its stones, bottom up: below `at` (a share of the height) the first colour, above it the second */
-  stones: { at: number; colours: [string, string] };
+  colour: string;                              // its stone's colour (the scan gives the detail, this the hue)
+  /** what it stands on, drawn simply where the scan hasn't it (the Victory's ship): height, length, beam, colour */
+  ship?: { h: number; base: number; length: number; beam: number; colour: string; at: number };
   credit: string;
 }
 
@@ -30,8 +32,7 @@ const SHADE = /* glsl */ `
     vec4 sampledDiffuseColor = texture2D( map, vMapUv );
     float L = dot( sampledDiffuseColor.rgb, vec3( 0.299, 0.587, 0.114 ) );
     float k = smoothstep( uLo, uHi, L );
-    vec3 stone = vLocalY < uSplit ? uLower : uUpper;
-    diffuseColor.rgb = stone * mix( 0.70, 1.06, k );
+    diffuseColor.rgb = uStone * mix( 0.72, 1.05, k );
   #endif
 `;
 
@@ -87,6 +88,39 @@ function footShadow(w: number, d: number) {
   return m;
 }
 
+/** the Victory's ship, simply: a base slab; the hull, its sides drawn in toward a pointed bow (+z) and leaning out
+    as they rise; and on top, over the stern half, the wide deck whose sides are the ship's oar-boxes */
+function shipGeometry(sh: NonNullable<Sculpture['ship']>) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: new THREE.Color(sh.colour), roughness: 0.78 });
+  const L = sh.length, B = sh.beam, deckH = 0.42, hullH = sh.h - deckH, y0 = sh.base;
+  const base = new THREE.Mesh(new THREE.BoxGeometry(B * 0.92, sh.base, L + 0.2), mat);
+  base.position.y = sh.base / 2;
+  // the hull: a ring of points at its foot and at its top (wider), joined
+  const ring = (w: number, y: number) => {
+    const hw = w / 2;
+    return [[-hw, y, -L / 2], [hw, y, -L / 2], [hw, y, L * 0.05], [hw * 0.45, y, L * 0.36], [0, y, L / 2], [-hw * 0.45, y, L * 0.36], [-hw, y, L * 0.05]];
+  };
+  const lo = ring(B * 0.62, y0), hi = ring(B * 0.78, y0 + hullH);
+  const pos: number[] = [], idx: number[] = [];
+  const n = lo.length;
+  for (const p of [...lo, ...hi]) pos.push(p[0], p[1], p[2]);
+  for (let i = 0; i < n; i++) { const j = (i + 1) % n; idx.push(i, n + i, j, j, n + i, n + j); }   // sides, facing out
+  const top = pos.length / 3;
+  let cx = 0, cz = 0; for (const p of hi) { cx += p[0] / n; cz += p[2] / n; }
+  pos.push(cx, y0 + hullH, cz);
+  for (let i = 0; i < n; i++) idx.push(n + i, top, n + (i + 1) % n);                               // the top
+  const hullGeo = new THREE.BufferGeometry();
+  hullGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  hullGeo.setIndex(idx);
+  const flat = hullGeo.toNonIndexed(); flat.computeVertexNormals();
+  const hull = new THREE.Mesh(flat, mat);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(B, deckH, L * 0.52), mat);
+  deck.position.set(0, y0 + hullH + deckH / 2, -L * 0.22);
+  g.add(base, hull, deck);
+  return g;
+}
+
 export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => number, onPlaced: (p: Placed) => void) {
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
@@ -94,13 +128,30 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
     loader.loadAsync(s.model).then((gltf) => {
       const model = gltf.scene;
       // its size as scanned → the Louvre's height; standing on the floor, its middle over the spot
-      const box = new THREE.Box3().setFromObject(model), size = box.getSize(new THREE.Vector3());
-      const k = s.height / size.y;
-      const lo = box.min.y, split = lo + s.stones.at * size.y;
-      const uniforms = {
-        uLower: { value: new THREE.Color(s.stones.colours[0]) }, uUpper: { value: new THREE.Color(s.stones.colours[1]) },
-        uSplit: { value: split }, uLo: { value: 0.12 }, uHi: { value: 0.78 },
-      };
+      // stray scraps in a scan (a few lines, a tiny box) left out first, so they don't count in its size
+      model.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if ((o as THREE.LineSegments).isLine || (o as THREE.Points).isPoints || (m.isMesh && m.geometry.index && m.geometry.index.count < 200)) o.visible = false;
+      });
+      model.updateMatrixWorld(true);
+      const box = new THREE.Box3();
+      model.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh && m.visible) { m.geometry.computeBoundingBox(); box.union(m.geometry.boundingBox!.clone().applyMatrix4(m.matrixWorld)); } });
+      const size = box.getSize(new THREE.Vector3());
+      const k = s.scanHeight / size.y, lo = box.min.y;
+      // where its feet are: the middle of its lowest slice (the wings reach far out to one side and back)
+      const feet = new THREE.Vector3(), v = new THREE.Vector3();
+      let nf = 0;
+      model.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || !m.visible) return;
+        const pos = m.geometry.getAttribute('position');
+        for (let i = 0; i < pos.count; i += 7) {
+          v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld);
+          if (v.y < lo + 0.05 * size.y) { feet.add(v); nf++; }
+        }
+      });
+      if (nf) feet.divideScalar(nf); else box.getCenter(feet);
+      const uniforms = { uStone: { value: new THREE.Color(s.colour) }, uLo: { value: 0.12 }, uHi: { value: 0.78 } };
       model.traverse((o) => {
         const m = o as THREE.Mesh;
         if (!m.isMesh) return;
@@ -109,10 +160,8 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
         if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
         mat.onBeforeCompile = (sh) => {
           Object.assign(sh.uniforms, uniforms);
-          sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vLocalY;')
-            .replace('#include <begin_vertex>', '#include <begin_vertex>\nvLocalY = position.y;');
           sh.fragmentShader = sh.fragmentShader
-            .replace('#include <common>', '#include <common>\nvarying float vLocalY; uniform vec3 uLower; uniform vec3 uUpper; uniform float uSplit; uniform float uLo; uniform float uHi;')
+            .replace('#include <common>', '#include <common>\nuniform vec3 uStone; uniform float uLo; uniform float uHi;')
             .replace('#include <map_fragment>', SHADE);
         };
         m.material = mat;
@@ -122,8 +171,8 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
       const holder = new THREE.Group();
       holder.add(model);
       holder.scale.setScalar(k);
-      const c = box.getCenter(new THREE.Vector3());
-      model.position.set(-c.x, -lo, -c.z);
+      model.position.set(-feet.x, -lo, -feet.z);
+      holder.position.set(0, s.ship ? s.ship.h + s.ship.base : 0, s.ship ? s.ship.at : 0);
       // the whole: its middle (for the focus) halfway up
       const group = new THREE.Group();
       const centre = new THREE.Object3D();
@@ -131,6 +180,7 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
       group.position.set(s.place.x, base, s.place.z);
       group.rotation.y = THREE.MathUtils.degToRad(s.place.yaw);
       group.add(holder);
+      if (s.ship) group.add(shipGeometry(s.ship));
       group.add(footShadow(s.w, s.depth));
       // light from the skylight overhead, a little forward of it (in the scene itself, always on: a light that came
       // and went with its floor would have every lit material rebuilt at each change of floor)

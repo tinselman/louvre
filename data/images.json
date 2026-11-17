@@ -7941,5 +7941,135 @@
 1109,
 800
 ]
+},
+"010061948": {
+"px": [
+960,
+720
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3b/L%27%C3%A9vanouissement_d%27Esther_%28Louvre%2C_INV_8216%29.jpg/1920px-L%27%C3%A9vanouissement_d%27Esther_%28Louvre%2C_INV_8216%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#746f6b",
+"file": "L'\u00e9vanouissement d'Esther (Louvre, INV 8216).jpg",
+"size": [
+2816,
+2112
+]
+},
+"010061167": {
+"px": [
+960,
+424
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/54/La_Course_d%27Hippom%C3%A8ne_et_d%27Atalante_-_No%C3%ABl_Hall%C3%A9_-_Mus%C3%A9e_du_Louvre_Peintures_INV_5270_%3B_B_645.jpg/1920px-La_Course_d%27Hippom%C3%A8ne_et_d%27Atalante_-_No%C3%ABl_Hall%C3%A9_-_Mus%C3%A9e_du_Louvre_Peintures_INV_5270_%3B_B_645.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#7b756a",
+"file": "La Course d'Hippom\u00e8ne et d'Atalante - No\u00ebl Hall\u00e9 - Mus\u00e9e du Louvre Peintures INV 5270 ; B 645.jpg",
+"size": [
+8554,
+3775
+]
+},
+"010066134": {
+"px": [
+869,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/CrucifixionVanDyckLouvre.jpg/1920px-CrucifixionVanDyckLouvre.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#615142",
+"file": "CrucifixionVanDyckLouvre.jpg",
+"size": [
+3993,
+4704
+]
+},
+"010064720": {
+"px": [
+759,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/7/76/Gerard_Seghers_-_Resurrection_of_Christ.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#483e37",
+"file": "Gerard Seghers - Resurrection of Christ.jpg",
+"size": [
+1351,
+1823
+]
+},
+"010062150": {
+"px": [
+960,
+627
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Jacob_Jordaens_-_Jesus_chasing_the_merchants_from_the_temple.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#665740",
+"file": "Jacob Jordaens - Jesus chasing the merchants from the temple.jpg",
+"size": [
+1484,
+969
+]
+},
+"010064399": {
+"px": [
+786,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/d/db/Jacob_Jordaens_-_The_Last_Judgement.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#67552f",
+"file": "Jacob Jordaens - The Last Judgement.jpg",
+"size": [
+1151,
+1500
+]
+},
+"010066487": {
+"px": [
+760,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/7/73/Jacob_van_Oost_%28II%29_-_St_Macarius_of_Ghent_Giving_Aid_to_the_Plague_Victims_-_WGA16655.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#53412c",
+"file": "Jacob van Oost (II) - St Macarius of Ghent Giving Aid to the Plague Victims - WGA16655.jpg",
+"size": [
+1100,
+1481
+]
+},
+"010060820": {
+"px": [
+814,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Le_D%C3%A9barquement_de_la_reine_%C3%A0_Marseille%2C_le_3_novembre_1600_-_Pierre_Paul_Rubens_-_Mus%C3%A9e_du_Louvre_Peintures_INV_1774_%3B_MR_965.jpg/1920px-Le_D%C3%A9barquement_de_la_reine_%C3%A0_Marseille%2C_le_3_novembre_1600_-_Pierre_Paul_Rubens_-_Mus%C3%A9e_du_Louvre_Peintures_INV_1774_%3B_MR_965.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#6a5b4c",
+"file": "Le D\u00e9barquement de la reine \u00e0 Marseille, le 3 novembre 1600 - Pierre Paul Rubens - Mus\u00e9e du Louvre Peintures INV 1774 ; MR 965.jpg",
+"size": [
+2489,
+3133
+]
+},
+"010060839": {
+"px": [
+960,
+523
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/4/4c/Peter_Paul_Rubens_036.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#543625",
+"file": "Peter Paul Rubens 036.jpg",
+"size": [
+1600,
+872
+]
+},
+"010066010": {
+"px": [
+771,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/e/e1/Peter_Paul_Rubens_053.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#67482a",
+"file": "Peter Paul Rubens 053.jpg",
+"size": [
+1000,
+1328
+]
 }
 }

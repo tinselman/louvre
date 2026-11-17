@@ -119,3 +119,13 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
   brown paint, not her marble). p_moraiti's CC-BY scan has no textures (one tan material, lumpy); dan.myrtz / zrhyes /
   melina.osteo are souvenir replicas. Sketchfab downloads need a signed-in account; Thingiverse is behind Cloudflare's
   robot check (not to be got round). Waiting on Robyn.
+- 2026-11-16, late: Robyn made a Sketchfab account and downloaded the glTF; Safari unpacked it into
+  ~/Downloads/winged_victory_of_samothrace (copied to source/scans/victoire/; its license.txt is the credit to use).
+  It is the figure alone (no ship), 9 textures of 8192 px, ~330k triangles, two stray scraps (left out at load).
+  `gltf-transform optimize … --compress meshopt --texture-compress webp --texture-size 2048 --simplify-ratio 0.6`
+  → public/models/victoire.glb, 3.6 MB. `node tools/look.mjs models/victoire.glb out.png` shows a model from 4 sides.
+- She stands in the Daru hall (the Louvre's room 703 is the "Palier Samothrace"), x 84 z -52.5, facing west toward
+  the Salle Daru: the figure 3.28 m on her ship (Claude's simple drawing from the Louvre's measurements: 2.00 m high,
+  4.29 long, 2.58 wide, on a 0.36 m base, grey Lartos marble), 5.64 m in all. The scan's colour map gives the surface
+  detail; its hue (the Basel cast's brown paint) is turned to Parian marble (#ece7dd). Credit on her label and on the
+  wall title. Frame times 2.3 ms beside her; WebKit renders her.

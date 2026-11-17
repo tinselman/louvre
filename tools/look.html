@@ -1,0 +1,22 @@
+<!doctype html><html><body style="margin:0;background:#ddd"><script type="module">
+/* look.html — a model alone, from four sides (front +z, right +x, back, left), as scanned: for tools/look.mjs */
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+const q = new URLSearchParams(location.search), W = 1600, H = 520;
+const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }); r.setSize(W, H); r.setScissorTest(true); document.body.appendChild(r.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdddddd);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 2.5));
+const l = new GLTFLoader(); l.setMeshoptDecoder(MeshoptDecoder);
+const g = await l.loadAsync(q.get('model'));
+scene.add(g.scene);
+const box = new THREE.Box3().setFromObject(g.scene), c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+const R = Math.max(s.x, s.y, s.z) * 1.4;
+['front (+z)', 'right (+x)', 'back (-z)', 'left (-x)'].forEach((name, i) => {
+  const a = i * Math.PI / 2, cam = new THREE.PerspectiveCamera(35, (W / 4) / H, 0.1, 1000);
+  cam.position.set(c.x + Math.sin(a) * R, c.y, c.z + Math.cos(a) * R); cam.lookAt(c);
+  r.setViewport(i * W / 4, 0, W / 4, H); r.setScissor(i * W / 4, 0, W / 4, H); r.render(scene, cam);
+});
+window.__info = { min: box.min.toArray().map((v) => +v.toFixed(2)), max: box.max.toArray().map((v) => +v.toFixed(2)), size: s.toArray().map((v) => +v.toFixed(2)) };
+window.__done = true;
+</script></body></html>

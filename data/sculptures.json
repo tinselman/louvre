@@ -1,1 +1,12 @@
-[]
+[
+ {
+  "id": "010252531", "title": "Winged Victory of Samothrace", "fr": "Victoire de Samothrace",
+  "artist": "Greek, Hellenistic period", "date": "c. 200–175 BC",
+  "medium": "Parian marble (the Victory); grey Lartos marble (the ship and its base)", "inv": "Ma 2369",
+  "room": "703", "floor": 1, "place": { "x": 84.0, "z": -52.5, "yaw": -90 },
+  "height": 5.64, "scanHeight": 3.28, "w": 2.6, "depth": 4.6,
+  "model": "models/victoire.glb", "colour": "#ece7dd",
+  "ship": { "h": 2.0, "base": 0.36, "length": 4.29, "beam": 2.58, "colour": "#9a9893", "at": -0.35 },
+  "credit": "This work is based on “Winged Victory of Samothrace” (sketchfab.com) by CosmoWenman, a scan of the Skulpturhalle Basel’s cast, CC BY 4.0 — its colours turned to the marble’s; the ship drawn simply from the Louvre’s measurements."
+ }
+]

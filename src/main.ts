@@ -102,7 +102,7 @@ async function start() {
     title: 'Musée du Louvre', sub: 'The Paintings · Denon, Richelieu and Sully',
     how: touchOnly ? 'Drag the floor to walk, a wall to turn · tap a painting to see it whole'
       : 'Click to look with the mouse · W A S D to walk · walk up to a painting, click to see it whole · M for the map',
-    credit: 'Rooms after OpenStreetMap’s indoor map (© OpenStreetMap contributors). Which room each painting hangs in, and the words\non the labels: the musée du Louvre’s collections database (Etalab Open Licence). Photographs: Wikimedia Commons,\npublic domain. Within each room the paintings are hung by date; the walls, ceilings and frames are simplified, all in white.',
+    credit: 'Rooms after OpenStreetMap’s indoor map (© OpenStreetMap contributors). Which room each painting hangs in, and the words\non the labels: the musée du Louvre’s collections database (Etalab Open Licence). Photographs: Wikimedia Commons,\npublic domain. Within each room the paintings are hung by date; the walls, ceilings and frames are simplified, all in white.\nThe Winged Victory: after “Winged Victory of Samothrace” by CosmoWenman (Sketchfab, CC BY 4.0), a scan of the Basel cast, coloured as her marble.',
   }] : [];
   // each floor hung on its own
   const items: Item[] = [], unplaced: Work[] = [];
