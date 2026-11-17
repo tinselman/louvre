@@ -72,3 +72,12 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
 - All 10,427 Wikidata paintings with a Louvre ARK read (2026-11-16 evening). In the rooms built: 623 hung, 35 left out
   for want of a public-domain picture, 1 for want of a size (paintings the Louvre has that Wikidata doesn't know aren't
   counted at all).
+
+## Online (2026-11-16, his "make this public" / "you get it working for me")
+- Repo tinselman/louvre is PUBLIC (free GitHub Pages needs that). Address: **https://tinselman.github.io/louvre/**
+- Pages serves the repo's **main** branch (root). main = the finished site only; this workshop copy lives on the
+  **studio** branch (this folder's branch is `studio`, tracking origin/studio). `gh-pages` is a leftover copy, unused.
+- `Projects/louvre-site` is the finished site's own checkout (branch main, .nojekyll). To publish, only at his word:
+  `npm run build` here → copy `dist/` over louvre-site (keep its .git and .nojekyll) → commit there → `git push`.
+  Ordinary pushes only; he sees the old page for ~10 min in Safari — tell him Cmd-Option-R.
+- Commits are by RobynMiller <RobynMiller@mac.lan> (set in both folders' git config) — never his Gmail.
