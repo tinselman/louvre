@@ -12,10 +12,11 @@ import json
 WALL = 0.7
 
 R = []
-def room(id, name, rect, spring, top, ceiling='flat', sky=0.0, axis=None, hang=True):
+FH = 8.0          # the second floor's floor, above the first's (Claude's stylised storey)
+def room(id, name, rect, spring, top, ceiling='flat', sky=0.0, axis=None, hang=True, floor=1, **kw):
     x0, z0, x1, z1 = rect
     R.append(dict(id=id, name=name, x0=x0, z0=z0, x1=x1, z1=z1, spring=spring, top=top, ceiling=ceiling, sky=sky,
-                  axis=axis or ('x' if x1 - x0 >= z1 - z0 else 'z'), hang=hang))
+                  axis=axis or ('x' if x1 - x0 >= z1 - z0 else 'z'), hang=hang, floor=floor, y=0.0 if floor == 1 else FH, **kw))
 
 GG_Z = (-3.2, 8.4)
 room('719', 'Goya',                               (-286.0, -9.0, -259.0, 8.4), 8.0, 11.0, 'cove', 0.45)
@@ -42,6 +43,78 @@ room('715', 'Salle 715',                           (-75.9, -48.6, -71.6, -36.9),
 room('714', 'Beistegui Collection',                (-85.9, -36.2, -71.2, -26.0), 6.0, 7.0, 'cove', 0.3)
 room('713', 'Great Britain · United States',      (-86.1, -25.3, -71.4, -15.6), 6.0, 7.0, 'cove', 0.3)
 room('713p', 'Passage',                            (-75.9, -14.9, -71.6, -3.9), 4.8, 5.5, 'flat', 0.0, hang=False)
+# Sully, first floor: the way from the Salle des verres to the stair up (under the second floor, so lower)
+room('660', 'Salon des Sept-Cheminées',            (127.5, -64.2, 147.5, -40.8), 5.6, 7.0, 'cove', 0.0)
+room('662', 'Salle Henri II',                      (127.6, -75.4, 150.1, -64.0), 5.6, 7.0, 'cove', 0.0)
+room('663', 'Salle des Bronzes',                   (129.4, -110.7, 149.9, -75.1), 5.6, 7.0, 'cove', 0.0, 'z')
+room('c1', 'Passage',                    (142.5, -119.6, 147.4, -111.4), 3.6, 3.6, 'flat', 0.0, hang=False)
+
+# ---- the second floor: Richelieu (north) and Sully (round the Cour Carrée), from OpenStreetMap ------------------
+import re
+C2 = json.load(open('source/osm/cores2.json'))
+SKIP = {'825-shim'}
+MANUAL = {   # rooms OpenStreetMap lacks or maps oddly: Claude's reading of the visitor plan (not surveyed)
+    '914': ('Charles Le Brun', (219.4, -202.6, 259.6, -191.4)),
+    '916': ('Salle 916', (269.7, -199.8, 284.2, -190.6)),
+    '917': ('Salle 917', (269.7, -189.9, 284.2, -181.6)),
+    '918': ('Salle 918', (269.7, -180.9, 284.2, -173.3)),
+    '922': ('Salles 922–923', (271.6, -145.0, 282.8, -137.8)),
+    '925': ('Pastels du XVIIIe siècle', (272.8, -120.6, 284.2, -114.4)),
+    '926': ('Pastels du XVIIIe siècle', (272.8, -113.7, 284.2, -108.4)),
+    '931': ('Salle 931', (269.3, -67.1, 284.3, -57.1)),
+}
+SPECIAL = {  # OpenStreetMap shapes with no room number: which they are
+    'Jean-Baptiste Greuze': '932', 'Allemagne, Autriche - XVII': '861',
+}
+PASSAGES = {  # corridors and landings worth walking through (kind, rough rectangle → id, name)
+    (-26.4, -256.4): ('c-855', 'Passage'), (-16.5, -205.3): ('c-800', 'Passage'), (-82.0, -268.0): ('c-848', 'Passage'),
+    (69.2, -228.1): ('c-817', 'Passage'), (78.0, -227.9): ('c-823', 'Passage'), (70.5, -245.5): ('c-814', 'Passage'),
+    (96.7, -251.5): ('c-825', 'Passage'), (142.6, -144.5): ('c-900', 'Passage'),
+}
+rows = {}
+for k, e in C2.items():
+    x0, z0, x1, z1 = e['core']
+    m = re.match(r'(\d{3})\s*(.*)', e['name'])
+    if m: rid, name = m.group(1), (m.group(2) or f'Salle {m.group(1)}')
+    elif e['name'].split(' - XVII')[0] + (' - XVII' if ' - XVII' in e['name'] else '') in SPECIAL: rid, name = SPECIAL[e['name'].split(' - XVII')[0] + (' - XVII' if ' - XVII' in e['name'] else '')], e['name']
+    elif e['name'] in SPECIAL: rid, name = SPECIAL[e['name']], e['name']
+    elif (round(x0, 1), round(z0, 1)) in PASSAGES: rid, name = PASSAGES[(round(x0, 1), round(z0, 1))]
+    else: continue
+    if rid in MANUAL or rid in rows: continue
+    if name.startswith('Salle ' + rid): name = f'Salle {rid}'
+    rows[rid] = [name, [x0, z0, x1, z1]]
+for rid, (name, rect) in MANUAL.items(): rows[rid] = [name, list(rect)]
+# a few joins tidied so neighbours meet (Claude's): the Lefuel landing reaches room 802, its passage reaches 855,
+# room 830 reaches 909 across the rotunda, and a passage joins 829 to 830
+rows['lefuel'] = ['Escalier Lefuel', [-19.5, -267.1, -5.4, -252.3]]
+rows['c-855'][1] = [-26.6, -256.4, -20.2, -251.9]
+rows['830'][1][2] = 116.4
+rows['c-829'] = ['Passage', [106.5, -207.7, 117.2, -197.9]]
+rows['936'][1][0], rows['936'][1][2] = 196.9, 222.3       # Salle 936 reaches 940 and 935
+rows['944'][1][1] = -67.3                                  # 944 reaches the west wing (945)
+rows['813'][1][3] = -258.8                                 # (813 overlapped 809)
+rows['c2'] = ['Passage', [142.5, -120.2, 147.3, -111.4]]
+NAMES = {'800': 'Grande peinture religieuse', '801': 'Rubens · the Medici Gallery', '802': 'Large Flemish paintings'}
+for rid, (name, (x0, z0, x1, z1)) in sorted(rows.items()):
+    a = (x1 - x0) * (z1 - z0)
+    name = NAMES.get(rid, name)
+    if rid.startswith('c') or rid == 'lefuel':
+        if rid == 'lefuel': room(rid, name, (x0, z0, x1, z1), 6.0, 8.0, 'cove', 0.4, hang=False, floor=2)
+        else: room(rid, name, (x0, z0, x1, z1), 3.6, 3.6, 'flat', 0.0, hang=False, floor=2)
+    elif rid == '801': room(rid, name, (x0, z0, x1, z1), 7.0, 10.5, 'vault', 0.35, 'z', floor=2)
+    elif a < 45: room(rid, name, (x0, z0, x1, z1), 5.2, 6.2, 'cove', 0.35, floor=2)
+    elif a < 160: room(rid, name, (x0, z0, x1, z1), 5.8, 7.4, 'cove', 0.45, floor=2)
+    else: room(rid, name, (x0, z0, x1, z1), 6.5, 8.5, 'cove', 0.5, floor=2)
+
+# the stair between the floors (Escalier Henri II, where OpenStreetMap has it): a room on each floor over the same
+# plan — the first floor's walls run up to the second's floor, the second's go on up to a top-lit cove — and two
+# flights between: the first rises west from the first floor to a landing, the second back east to the second floor
+SX0, SZ0, SX1, SZ1 = 128.2, -119.6, 141.8, -111.4
+room('s1', 'Escalier Henri II', (SX0, SZ0, SX1, SZ1), FH, FH, 'none', 0.5, hang=False, floor=1, stair=True, wallTop=FH + 6.5)
+room('s2', 'Escalier Henri II', (SX0, SZ0, SX1, SZ1), 6.5, 8.0, 'cove', 0.5, hang=False, floor=2, stair=True, wallTop=FH + 6.5)
+STAIRS = [dict(id='henri2', x0=SX0, z0=SZ0, x1=SX1, z1=SZ1, rise=FH,
+               # band A (north, z0..aZ) climbs from the east end (xE) west to the landing (xL); band B (south) back east
+               aZ=-115.8, bZ=-115.2, xL=131.2, xE=140.3)]
 
 # keep a wall at least WALL thick wherever two rooms face each other
 by = {r['id']: r for r in R}
@@ -55,6 +128,7 @@ def facing(a, b):
     return None
 for i, a in enumerate(R):
     for b in R[i + 1:]:
+        if a['floor'] != b['floor'] or a.get('stair') or b.get('stair'): continue
         f = facing(a, b)
         if not f: continue
         ax, gap, _ = f
@@ -103,6 +177,24 @@ door('703', '704', w=4.0, h=5.6)
 door('704', '705', w=5.0, h=6.0)
 door('704', '661', w=3.6, h=5.0)
 door('708', '705', w=4.0, h=5.6, at=4.0)
+door('661', '660', w=3.6, h=4.6)
+door('660', '662', w=4.0, h=4.6)
+door('662', '663', w=4.0, h=4.6)
+door('663', 'c1', w=3.0, h=3.2, at=145.0)
+door('c1', 's1', w=3.0, h=3.2, at=-117.7)
+door('c2', 's2', w=3.0, h=3.2, at=-113.3)
+# the second floor: every two rooms that face each other across a wall over 2.2 m of it get a doorway in the middle
+# (Claude's: OpenStreetMap doesn't map the doorways). Wider where the wall is long, as tall as the lower room allows.
+F2 = [r for r in R if r['floor'] == 2 and not r.get('stair')]
+for i, a in enumerate(F2):
+    for b in F2[i + 1:]:
+        f = facing(a, b)
+        if not f: continue
+        ax, gap, (s0, s1) = f
+        if gap > 3.0 or s1 - s0 < 2.0: continue
+        w = max(1.6, min(3.2, 0.32 * (s1 - s0)))
+        h = max(2.8, min(4.2, min(a['spring'], b['spring']) - 0.9))
+        door(a['id'], b['id'], w=w, h=h)
 
 # free-standing walls: the end wall of the Salle des États (the Wedding at Cana) and the Mona Lisa's own wall
 s = by['711']; cx = (s['x0'] + s['x1']) / 2
@@ -118,9 +210,23 @@ s = by['711']; cx = (s['x0'] + s['x1']) / 2
 RAILS = [dict(id='joconde-rail', room='711', x0=round(cx - 3.0, 2), z0=-25.4, x1=round(cx + 3.0, 2), z1=-25.4, h=0.95)]
 
 out = dict(note='Denon wing, first floor — rooms from OpenStreetMap indoor data (© OpenStreetMap contributors, ODbL), turned so the Grande Galerie runs east-west; heights stylised.',
-           rooms=R, doors=D, walls=W, rails=RAILS,
+           rooms=R, doors=D, walls=W, rails=RAILS, stairs=STAIRS, floorHeight=FH,
            # in the Salon Carré, looking west down the Grande Galerie
            start=dict(x=96.0, z=2.6, yaw=90.0))
 json.dump(out, open('data/building.json', 'w'), ensure_ascii=False, indent=1)
 print(len(R), 'rooms', len(D), 'doors', len(W), 'free walls')
-for d in D: print(d)
+# every room reachable from the start?
+adj = {r['id']: set() for r in R}
+for d in D: adj[d['a']].add(d['b']); adj[d['b']].add(d['a'])
+adj['s1'].add('s2'); adj['s2'].add('s1')
+seen, todo = {'708'}, ['708']
+while todo:
+    for n in adj[todo.pop()]:
+        if n not in seen: seen.add(n); todo.append(n)
+print('not reachable:', sorted(set(adj) - seen))
+# rooms on one floor that overlap (the plan's tidying missed)
+for i, a in enumerate(R):
+    for b in R[i + 1:]:
+        if a['floor'] != b['floor'] or (a.get('stair') and b.get('stair')): continue
+        ox = min(a['x1'], b['x1']) - max(a['x0'], b['x0']); oz = min(a['z1'], b['z1']) - max(a['z0'], b['z0'])
+        if ox > 0.01 and oz > 0.01: print('OVERLAP', a['id'], b['id'], round(ox, 2), round(oz, 2))

@@ -65,19 +65,22 @@ function roundRoom(A: Arch, r: Room): Seg[] {
   return segs;
 }
 
-export function hang(A: Arch, works: Work[], reserve: { face: string; a: number; b: number }[] = []): { items: Item[]; unplaced: Work[] } {
+export function hang(A: Arch, works: Work[], reserve: { face: string; a: number; b: number }[] = [], doors: { a: string; b: string }[] = []): { items: Item[]; unplaced: Work[] } {
   const items: Item[] = [];
   const unplaced: Work[] = [];
   const byRoom = new Map<string, Work[]>();
   for (const w of works) { if (!byRoom.has(w.room)) byRoom.set(w.room, []); byRoom.get(w.room)!.push(w); }
 
-  const put = (w: Work, f: Face, u: number, y: number, labelSide: 1 | -1 | 0, free = false) => {
+  const put = (w: Work, f: Face, u: number, y: number, labelSide: 1 | -1 | 0 | 2, free = false) => {
     const [ow, oh] = outer(w), fw = frameOf(w);
     const pos = facePoint(f, u, y);
     const normal: V3 = [f.n[0], 0, f.n[1]], right: V3 = [f.right[0], 0, f.right[1]];
     const depth = 0.05 + Math.min(0.09, fw * 0.45);
     let label: V3 | null = null;
-    if (labelSide) {
+    if (labelSide === 2) {
+      // no room beside it (a crowded wall): just under it
+      label = facePoint(f, u, y - oh / 2 - 0.05 - LABEL_H / 2);
+    } else if (labelSide) {
       const lu = u + labelSide * rightSign(f) * (ow / 2 + LABEL_GAP + LABEL_W / 2);
       const ly = free ? y - oh / 2 + LABEL_H / 2 : Math.min(1.45, Math.max(1.05, y - oh / 2 + LABEL_H / 2));
       label = facePoint(f, lu, ly);
@@ -98,9 +101,10 @@ export function hang(A: Arch, works: Work[], reserve: { face: string; a: number;
   pin(/Joconde|Mona Lisa/i, 'joconde', -1);
   pin(/Noces de Cana|Wedding at Cana/i, 'cana', 1);
 
-  for (const r of A.rooms) {
+  /* one room's hanging: its works on its walls (into `items`); what found no wall goes into `unplaced` */
+  const hangRoom = (r: Room, given: Work[]) => {
     const wallH = r.ceiling === 'flat' ? r.top : r.spring;
-    let list = (byRoom.get(r.id) ?? []).filter((w) => !pinned.has(w.id));
+    let list = given;
     // a ceiling painting (the Louvre's titles say "Plafond"), or one too tall for the walls (as Delacroix's Apollo in
     // the Galerie d'Apollon): flat overhead
     const over = list.filter((w) => /^plafond/i.test(w.fr) || (outer(w)[1] > wallH - 0.9 && r.ceiling !== 'flat'));
@@ -116,14 +120,14 @@ export function hang(A: Arch, works: Work[], reserve: { face: string; a: number;
         const R = r.ceiling === 'cove' ? r.top - r.spring : 0, inner = Math.min(r.x1 - r.x0, r.z1 - r.z0) - 2 * R;
         const y = r.ceiling === 'vault' ? vaultY(r, Math.min(W / 2 - 0.05, ow / 2 + 0.15), W) - 0.12
           : r.ceiling === 'cove' && Math.max(ow, oh) > inner - 0.2 ? r.spring + 0.05 : r.top - 0.15;
-        const pos: V3 = r.axis === 'x' ? [a, y, mid] : [mid, y, a];
+        const pos: V3 = r.axis === 'x' ? [a, y + r.y, mid] : [mid, y + r.y, a];
         // its top toward the room's far end along the axis; seen from below, the right way round
         const up: V3 = r.axis === 'x' ? [1, 0, 0] : [0, 0, 1];
         const right: V3 = r.axis === 'x' ? [0, 0, -1] : [1, 0, 0];
         items.push({ work: w, face: null, pos, ow, oh, fw, depth: 0.05 + Math.min(0.09, fw * 0.45), label: null, normal: [0, -1, 0], right, up });
       });
     }
-    if (!list.length) continue;
+    if (!list.length) return;
     let segs = roundRoom(A, r);
     for (const q of reserve) {
       segs = segs.flatMap((s) => {
@@ -136,17 +140,17 @@ export function hang(A: Arch, works: Work[], reserve: { face: string; a: number;
     }
     // the bays of the Salle des Sept-Mètres: its free walls, both faces, join the round
     for (const f of A.faces.filter((q) => q.room === r && q.free && !/joconde|cana/.test(q.free.id))) segs.push(...segmentsOf(f));
-    if (!segs.length) { unplaced.push(...list); continue; }
+    if (!segs.length) { unplaced.push(...list); return; }
 
     const sorted = [...list].sort((a, b) => a.year - b.year || a.artist.localeCompare(b.artist));
     const cap = segs.reduce((s, g) => s + (g.b - g.a), 0);
     // a crowded room hangs closer together
-    const tight = Math.max(0.45, Math.min(1, cap / sorted.reduce((t, w) => t + outer(w)[0] + 0.35 * outer(w)[0] + 0.3, 0)));
-    const gapFor = (w: number) => Math.max(0.3, Math.min(1.4, 0.35 * w + 0.3) * tight);
+    const tight = Math.max(0.3, Math.min(1, cap / sorted.reduce((t, w) => t + outer(w)[0] + 0.35 * outer(w)[0] + 0.3, 0)));
+    const gapFor = (w: number) => Math.max(0.25, Math.min(1.4, 0.35 * w + 0.3) * tight);
     let cols: Col[] = sorted.map((w) => ({ works: [w], w: outer(w)[0] }));
     const need = () => cols.reduce((s, c) => s + c.w + gapFor(c.w), 0);
-    // too many for one row: the smallest neighbours go two high, then three
-    for (const most of [2, 3]) {
+    // too many for one row: the smallest neighbours go two high, then three (four or five, as the Louvre's cabinets are hung, where the walls are tall enough)
+    for (const most of [2, 3, 4, 5]) {
       while (need() > cap * 0.97) {
         let best = -1, bestW = Infinity;
         for (let i = 0; i + 1 < cols.length; i++) {
@@ -195,7 +199,7 @@ export function hang(A: Arch, works: Work[], reserve: { face: string; a: number;
       return runs;
     };
     const runs = fill(true) ?? fill(false);
-    if (!runs) { unplaced.push(...list); continue; }
+    if (!runs) { unplaced.push(...list); return; }
     // even spacing along each stretch, never wider apart than a little more than the works themselves
     runs.forEach((run, i) => {
       if (!run.length) return;
@@ -218,7 +222,8 @@ export function hang(A: Arch, works: Work[], reserve: { face: string; a: number;
         bottom = Math.max(0.35, Math.min(bottom, H - 0.45 - stackH));
         // the label goes to the right of each work (to the left where a stretch ends too soon on the right)
         const plusU = k < run.length - 1 ? g : s.b - (u + c.w), minusU = k > 0 ? g : u - s.a;
-        const side: 1 | -1 = (rs > 0 ? plusU : minusU) >= LABEL_W + LABEL_GAP + 0.05 ? 1 : -1;
+        const room = LABEL_W + LABEL_GAP + 0.05, right = rs > 0 ? plusU : minusU, left = rs > 0 ? minusU : plusU;
+        const side: 1 | -1 | 2 = right >= room ? 1 : left >= room ? -1 : 2;
         let y = bottom;
         ws.forEach((w, j) => {
           const h = hs[j];
@@ -229,6 +234,51 @@ export function hang(A: Arch, works: Work[], reserve: { face: string; a: number;
         u += c.w + g;
       });
     });
+  };
+  /** hang a room on its own, without touching what's hung already: its items and what was left over */
+  const trial = (r: Room, list: Work[]) => {
+    const keepI = items.length, keepU = unplaced.length;
+    hangRoom(r, list);
+    const got = { items: items.splice(keepI), left: unplaced.splice(keepU) };
+    return got;
+  };
+  const results = new Map<string, { items: Item[]; left: Work[]; list: Work[] }>();
+  for (const r of A.rooms) {
+    const list = (byRoom.get(r.id) ?? []).filter((w) => !pinned.has(w.id));
+    results.set(r.id, { ...trial(r, list), list });
   }
+  /* a room with more paintings than wall lends what's left over to a neighbour through a doorway that has wall to
+     spare (Claude's, so that none is left out; the label still names the painting, not the room) */
+  const near = new Map<string, string[]>();
+  for (const d of doors) { for (const [a, b] of [[d.a, d.b], [d.b, d.a]]) { if (!near.has(a)) near.set(a, []); near.get(a)!.push(b); } }
+  for (const r of A.rooms) {
+    const mine = results.get(r.id)!;
+    if (!mine.left.length) continue;
+    // next door first, then two doorways away
+    const ids = [...new Set([...(near.get(r.id) ?? []), ...(near.get(r.id) ?? []).flatMap((n) => near.get(n) ?? [])])].filter((id) => id !== r.id);
+    const others = ids.map((id) => A.byId.get(id)).filter((q): q is Room => !!q && q.hang && !q.stair);
+    for (const o of others) {
+      const theirs = results.get(o.id)!;
+      const t = trial(o, [...theirs.list, ...mine.left]);
+      if (t.left.length <= theirs.left.length) {
+        results.set(o.id, { items: t.items, left: t.left, list: [...theirs.list, ...mine.left] });
+        mine.left = [];
+        break;
+      }
+      // or just some of them: as many as fit, smallest first
+      const few = [...mine.left].sort((a, b) => a.w * a.h - b.w * b.h);
+      while (few.length > 1) {
+        few.pop();
+        const t2 = trial(o, [...theirs.list, ...few]);
+        if (t2.left.length <= theirs.left.length) {
+          results.set(o.id, { items: t2.items, left: t2.left, list: [...theirs.list, ...few] });
+          mine.left = mine.left.filter((w) => !few.includes(w));
+          break;
+        }
+      }
+      if (!mine.left.length) break;
+    }
+  }
+  for (const v of results.values()) { items.push(...v.items); unplaced.push(...v.left); }
   return { items, unplaced };
 }

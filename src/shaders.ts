@@ -42,18 +42,18 @@ const OUT = /* glsl */ `
 `;
 
 /** a room's skylight, as a rectangle in plan (or none), for the soft brightening of what's under and around it */
-export interface SkyRefs { rect: THREE.Vector4; top: number }
+export interface SkyRefs { rect: THREE.Vector4; top: number; base?: number }
 const SKY_GLSL = /* glsl */ `
-  uniform vec4 uSky; uniform float uTop;
+  uniform vec4 uSky; uniform float uTop; uniform float uBase;
   // light from the skylight: more the nearer (in plan) and the higher up a point is
   float skyLight(vec3 p) {
     if (uSky.z <= uSky.x) return 0.0;
     vec2 c = clamp(p.xz, uSky.xy, uSky.zw);
     float d = length(p.xz - c);
-    return exp(-d / 7.0) * (0.35 + 0.65 * clamp(p.y / uTop, 0.0, 1.0));
+    return exp(-d / 7.0) * (0.35 + 0.65 * clamp((p.y - uBase) / uTop, 0.0, 1.0));
   }
 `;
-const skyUniforms = (s: SkyRefs) => ({ uSky: { value: s.rect }, uTop: { value: s.top } });
+const skyUniforms = (s: SkyRefs) => ({ uSky: { value: s.rect }, uTop: { value: s.top }, uBase: { value: s.base ?? 0 } });
 
 export interface FaceInfo {
   normal: THREE.Vector3; right: THREE.Vector3; axisX: boolean; u0: number; u1: number;
@@ -107,17 +107,18 @@ export function wallMaterial(F: FaceInfo, albedo: THREE.Color, sky: SkyRefs) {
           float d2 = length(max(e2, 0.0));
           shade *= 1.0 - 0.16 * exp(-d2 / 0.006) * step(0.0, max(e2.x, e2.y));
         }
-        float ao = occ(vW.y, 0.30, 0.32);
+        float hy = vW.y - uBase;
+        float ao = occ(hy, 0.30, 0.32);
         float u = uAxisX > 0.5 ? vW.x : vW.z;
         if (uCA > 0.5) ao *= occ(u - uU0, 0.22, 0.35);
         if (uCB > 0.5) ao *= occ(uU1 - u, 0.22, 0.35);
-        ao *= occ(uSpring - vW.y, 0.10, 0.5);
-        float amb = uAmb * (0.93 + 0.06 * dot(n.xz, vec2(0.45, 0.893))) * (0.95 + 0.07 * clamp(vW.y / uSpring, 0.0, 1.0));
+        ao *= occ(uSpring - hy, 0.10, 0.5);
+        float amb = uAmb * (0.93 + 0.06 * dot(n.xz, vec2(0.45, 0.893))) * (0.95 + 0.07 * clamp(hy / uSpring, 0.0, 1.0));
         amb += 0.10 * skyLight(vW);
         vec2 t = abs(n.x) > 0.5 ? vW.zy : vW.xy;
         float grain = 1.0 + 0.018 * (vnoise(t * 41.0) - 0.5) + 0.012 * (fbm(t * 1.7) - 0.5);
         vec3 alb = uAlb * grain;
-        if (vW.y < 0.015) alb *= 0.25;
+        if (hy < 0.015) alb *= 0.25;
         gl_FragColor = vec4(alb * amb * ao * shade, 1.0);
         ${OUT}
       }`,
@@ -140,7 +141,7 @@ export function plasterMaterial(albedo: THREE.Color, sky: SkyRefs) {
         float down = clamp(-n.y, 0.0, 1.0);
         float amb = uAmb * (0.97 - 0.05 * down + 0.04 * dot(n.xz, vec2(0.45, 0.893))) + 0.16 * skyLight(vW);
         float grain = 1.0 + 0.012 * (vnoise(vW.xz * 23.0 + vW.y * 7.0) - 0.5);
-        if (vW.y < 0.015) amb *= 0.3;
+        if (vW.y - uBase < 0.015) amb *= 0.3;
         gl_FragColor = vec4(uAlb * amb * grain, 1.0);
         ${OUT}
       }`,
@@ -171,7 +172,7 @@ export function floorMaterial(refl: THREE.Texture, texMat: THREE.Matrix4, segs: 
   const s = segs.slice(0, MAXSEG);
   while (s.length < MAXSEG) s.push(new THREE.Vector4(1e5, 1e5, 1e5, 1e5));
   return new THREE.ShaderMaterial({
-    uniforms: { uRefl: { value: refl }, uTexMat: { value: texMat }, uAmb: { value: FLOOR_AMB }, uSeg: { value: s }, uNSeg: { value: Math.min(segs.length, MAXSEG) }, ...skyUniforms(sky) },
+    uniforms: { uRefl: { value: refl }, uTexMat: { value: texMat }, uGloss: { value: 1 }, uAmb: { value: FLOOR_AMB }, uSeg: { value: s }, uNSeg: { value: Math.min(segs.length, MAXSEG) }, ...skyUniforms(sky) },
     vertexShader: /* glsl */ `
       uniform mat4 uTexMat;
       varying vec3 vW; varying vec3 vN; varying vec2 vUv; varying vec4 vR;
@@ -184,7 +185,7 @@ export function floorMaterial(refl: THREE.Texture, texMat: THREE.Matrix4, segs: 
     fragmentShader: /* glsl */ `
       #define MAXSEG ${MAXSEG}
       uniform sampler2D uRefl;
-      uniform float uAmb;
+      uniform float uAmb; uniform float uGloss;   // (0 on the floor you're not on: its reflection isn't drawn)
       uniform vec4 uSeg[MAXSEG]; uniform int uNSeg;
       varying vec3 vW; varying vec3 vN; varying vec2 vUv; varying vec4 vR;
       ${SKY_GLSL}
@@ -211,7 +212,7 @@ export function floorMaterial(refl: THREE.Texture, texMat: THREE.Matrix4, segs: 
           float d = segDist(xz, uSeg[k]);
           ao *= 1.0 - 0.42 * exp(-d / 0.28);
         }
-        vec3 base = alb * (vec3(uAmb) * ao * (1.0 + 0.10 * skyLight(vec3(vW.x, 0.0, vW.z))));
+        vec3 base = alb * (vec3(uAmb) * ao * (1.0 + 0.10 * skyLight(vec3(vW.x, uBase, vW.z))));
         vec2 ruv = vR.xy / vR.w;
         vec2 wob = (vec2(fbm(xz * 7.0 + 3.1), fbm(xz * 7.0 - 7.3)) - 0.5) * 0.010;
         vec3 V = normalize(cameraPosition - vW);
@@ -221,7 +222,7 @@ export function floorMaterial(refl: THREE.Texture, texMat: THREE.Matrix4, segs: 
         for (int k = 0; k < 8; k++) rc += texture2D(uRefl, ruv + wob + DISC[k] * blur).rgb;
         rc /= 8.0;
         float F = 0.045 + 0.955 * pow(1.0 - max(V.y, 0.0), 5.0);
-        float gloss = 0.80 * mix(1.0, 0.75, m);
+        float gloss = 0.80 * mix(1.0, 0.75, m) * uGloss;
         vec3 col = base * (1.0 - F * gloss) + rc * F * gloss;
         gl_FragColor = vec4(col, 1.0);
         ${OUT}

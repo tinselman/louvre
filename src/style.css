@@ -149,3 +149,29 @@ body.exit-on #focus-hint { opacity: 0 !important; }
 
 /* the Louvre: the photograph's credit under the full view */
 #view .cap .credit { font-size: 11px; color: #8d8d8a; letter-spacing: .03em; }
+
+/* the map (map.ts): a round button in the bottom-right corner, and the plan above it, an X in its top-right corner */
+#map-btn { position: fixed; right: 18px; bottom: 18px; z-index: 30; width: 44px; height: 44px; border-radius: 50%;
+  border: 1px solid rgba(0,0,0,.14); background: rgba(255,255,255,.92); color: #2a2a29; display: flex;
+  align-items: center; justify-content: center; cursor: pointer; padding: 0; box-shadow: 0 2px 10px rgba(0,0,0,.10);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: background .15s, transform .15s; }
+#map-btn:hover { background: #fff; transform: scale(1.04); }
+#map-btn.on { background: #2a2a29; color: #fff; }
+#map { position: fixed; right: 18px; bottom: 72px; z-index: 30; width: min(980px, calc(100vw - 36px));
+  max-height: calc(100vh - 100px); overflow: auto; background: #fff; border: 1px solid rgba(0,0,0,.12);
+  border-radius: 10px; box-shadow: 0 10px 40px rgba(0,0,0,.16); color: #2a2a29; padding: 12px 14px 12px;
+  opacity: 0; transform: translateY(8px); pointer-events: none; transition: opacity .18s, transform .18s; box-sizing: border-box; }
+#map.on { opacity: 1; transform: none; pointer-events: auto; }
+#map .map-head { display: flex; align-items: center; gap: 14px; margin: 0 0 8px; padding-right: 30px; position: relative; }
+#map .map-title { font: 300 17px/1.2 "Inter Tight", "Helvetica Neue", sans-serif; letter-spacing: .01em; }
+#map .map-tabs { display: flex; gap: 4px; }
+#map .map-tabs button { font: 400 12px/1 "Inter Tight", "Helvetica Neue", sans-serif; padding: 6px 10px; border-radius: 6px;
+  border: 1px solid rgba(0,0,0,.12); background: #fff; color: #555; cursor: pointer; }
+#map .map-tabs button.on { background: #2a2a29; color: #fff; border-color: #2a2a29; }
+#map .map-close { position: absolute; right: -4px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px;
+  border: 0; background: transparent; color: #444; cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; padding: 0; }
+#map .map-close:hover { background: rgba(0,0,0,.06); color: #000; }
+#map canvas { display: block; width: 100%; }
+#map .map-here { margin-top: 8px; font: 400 12.5px/1.4 "Inter Tight", "Helvetica Neue", sans-serif; color: #555; }
+body:has(#view.on) #map-btn, body:has(#view.on) #map { display: none; }
+@media (max-width: 560px) { #map { right: 10px; left: 10px; width: auto; bottom: 66px; } #map-btn { right: 12px; bottom: 12px; } }

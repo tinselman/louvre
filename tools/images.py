@@ -8,7 +8,10 @@ UA = "LouvreWalkthrough/0.1 (personal non-commercial project; one request at a t
 works = json.load(open('data/works.json'))
 lim = int(sys.argv[1]) if len(sys.argv) > 1 else 10**9
 imgs = json.load(open('data/images.json')) if os.path.exists('data/images.json') else {}
-todo = [w for w in works if w['id'] not in imgs][:lim]
+# the ones that failed before (Wikimedia wouldn't make their small thumbnail) go last, and get one try each
+tried = set(json.load(open('source/images-failed.json'))) if os.path.exists('source/images-failed.json') else set()
+todo = sorted([w for w in works if w['id'] not in imgs], key=lambda w: w['id'] in tried)[:lim]
+failed = set(tried)
 def get(url, tries=4):
     for k in range(tries):
         try:
@@ -56,8 +59,11 @@ for i in range(0, len(todo), 40):
                 src = orig.replace('/commons/', '/commons/thumb/', 1) + '/' + tail
             else:
                 src = orig
-        data = get(src, tries=1 if '/thumb/' not in src else 4)
-        if not data: print('no file', w['img']); continue
+        data = get(src, tries=1 if ('/thumb/' not in src or w['id'] in tried) else 3)
+        if not data:
+            print('no file', w['img'], flush=True); failed.add(w['id'])
+            json.dump(sorted(failed), open('source/images-failed.json', 'w')); continue
+        failed.discard(w['id'])
         raw = f"public/art/{w['id']}-raw"
         open(raw, 'wb').write(data)
         try:

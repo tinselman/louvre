@@ -1,18 +1,20 @@
-/* THE LOUVRE — DENON WING, FIRST FLOOR. The rooms of the Denon wing's painting galleries kept to their real plan
-   and proportions, made white, every painting the Louvre lists in them hung in its room; walked through as Robyn
-   Miller's Portrait gallery is: the mouse looks, W A S D walk, walking up to a painting darkens everything else,
-   a click opens it full size.
+/* THE LOUVRE — THE PAINTINGS. The Denon wing's first floor and the Richelieu and Sully wings' second, kept to their
+   real plan and proportions, made white, every painting the Louvre lists in them hung in its room, a stair between
+   the floors; walked through as Robyn Miller's Portrait gallery is: the mouse looks, W A S D walk, walking up to a
+   painting darkens everything else, a click opens it full size; M (or the button, bottom right) opens a map.
 
-   Test hooks (in the address):  ?at=x,z,yaw,pitch  stand somewhere (degrees)   ?hud=0  no 'click for full screen'
+   Test hooks (in the address):  ?at=x,z,yaw,pitch[,floor]  stand somewhere      ?hud=0  no 'click for full screen'
                                  ?open=<id>         open a work full size        ?room=711  start in a room
    window.__gReady turns true once the first frames are drawn. */
 import * as THREE from 'three';
 import './style.css';
 import { loadData } from './model';
-import { buildArch, facePoint, roomAt } from './arch';
+import { buildArch, facePoint, roomAt, type Arch, type Rect } from './arch';
 import { hang } from './hang';
-import type { Title } from './hang';
-import { buildInterior, labelCanvas, doorSigns, rails, type Pic } from './build';
+import type { Title, Item } from './hang';
+import type { Work } from './model';
+import { FloorMap } from './map';
+import { buildInterior, labelCanvas, doorSigns, rails, stairGeometry, stairFloor, type Pic, type Interior } from './build';
 import { FloorMirror } from './reflect';
 import { Player, EYE } from './player';
 import { Viewer } from './viewer';
@@ -85,17 +87,30 @@ async function start() {
   addEventListener('resize', sizeAll);
 
   /* ---- the building, the hanging, the pictures ----------------------------------------------------------- */
-  const arch = buildArch(data.building);
+  const B = data.building;
+  const FLOORS = [...new Set(B.rooms.map((r) => r.floor))].sort((a, b) => a - b);
+  const arches = new Map<number, Arch>(FLOORS.map((f) => [f, buildArch(B, f)]));
+  const arch = arches.get(1)!;
+  const stairs = B.stairs ?? [];
+  // what the stairs add to every floor: the wall between the flights (to walk into, and to see past)
+  const stairSolids: Rect[] = stairs.map((s) => ({ x0: s.xL, x1: s.x1, z0: s.aZ, z1: s.bZ }));
   // the wall title: in the Salon Carré, on the west wall beside the doorway into the Grande Galerie
   const sc = arch.faces.find((f) => f.room.id === '708' && !f.free && f.axis === 'z' && f.n[0] > 0)!;
   const titleU = -3.0, titles: Title[] = sc ? [{
     face: sc, pos: facePoint(sc, titleU, 1.62), normal: [1, 0, 0], right: [sc.right[0], 0, sc.right[1]],
-    title: 'Musée du Louvre', sub: 'Denon Wing · Paintings · First Floor',
+    title: 'Musée du Louvre', sub: 'The Paintings · Denon, Richelieu and Sully',
     how: touchOnly ? 'Drag the floor to walk, a wall to turn · tap a painting to see it whole'
-      : 'Click to look with the mouse · W A S D to walk · walk up to a painting, click to see it whole',
+      : 'Click to look with the mouse · W A S D to walk · walk up to a painting, click to see it whole · M for the map',
     credit: 'Rooms after OpenStreetMap’s indoor map (© OpenStreetMap contributors). Which room each painting hangs in, and the words\non the labels: the musée du Louvre’s collections database (Etalab Open Licence). Photographs: Wikimedia Commons,\npublic domain. Within each room the paintings are hung by date; the walls, ceilings and frames are simplified, all in white.',
   }] : [];
-  const { items, unplaced } = hang(arch, data.works, sc ? [{ face: sc.key, a: titleU - 1.35, b: titleU + 1.35 }] : []);
+  // each floor hung on its own
+  const items: Item[] = [], unplaced: Work[] = [];
+  const hungOn = new Map<number, Item[]>();
+  for (const f of FLOORS) {
+    const A = arches.get(f)!;
+    const h = hang(A, data.works.filter((w) => A.byId.has(w.room)), f === 1 && sc ? [{ face: sc.key, a: titleU - 1.35, b: titleU + 1.35 }] : [], B.doors);
+    items.push(...h.items); unplaced.push(...h.unplaced); hungOn.set(f, h.items);
+  }
   if (unplaced.length) console.warn(`${unplaced.length} works found no wall`, unplaced.map((w) => `${w.room} ${w.title}`));
 
   const cat = new Map(data.works.map((w) => [w.id, w]));
@@ -123,30 +138,67 @@ async function start() {
     }
     return t;
   };
-  const interior = buildInterior(arch, items, titles, flat, (id) => data.images[id]?.px, colourOf, mirror.target.texture, mirror.texMat);
-  scene.add(interior.group);
-  scene.add(doorSigns(arch, data.building.doors));
-  scene.add(rails(data.building.rails ?? []));
-  const pictures = interior.pictures;
+  const interiors = new Map<number, Interior>();
+  for (const f of FLOORS) {
+    const A = arches.get(f)!;
+    const it = buildInterior(A, hungOn.get(f)!, f === 1 ? titles : [], flat, (id) => data.images[id]?.px, colourOf, mirror.target.texture, mirror.texMat);
+    it.group.add(doorSigns(A, B.doors));
+    if (f === 1) it.group.add(rails(B.rails ?? []));
+    scene.add(it.group, it.stair);
+    interiors.set(f, it);
+  }
+  for (const s of stairs) scene.add(stairGeometry(s));
+  const pictures = FLOORS.flatMap((f) => interiors.get(f)!.pictures);
+  const floorOfPic = new Map<Pic, number>(FLOORS.flatMap((f) => interiors.get(f)!.pictures.map((p) => [p, f] as [Pic, number])));
   const byId = new Map<string, Pic>(pictures.map((p) => [p.work.id, p]));
 
-  /* ---- where you stand ------------------------------------------------------------------------------------ */
+  /* ---- where you stand: which floor, and how high (the stair's flights carry you between them) --------------- */
   const player = new Player(canvas);
-  player.solids = arch.solids;
   player.world = arch.bounds;
-  const st = data.building.start;
+  let cur = 1, inStair = false;
+  const baseOf = (f: number) => arches.get(f)!.base;
+  const setFloor = (f: number) => {
+    cur = f;
+    player.solids = [...arches.get(f)!.solids, ...stairSolids];
+    mirror.level = baseOf(f);
+    for (const [g, it] of interiors) for (const m of it.floors) (m.material as THREE.ShaderMaterial).uniforms.uGloss.value = g === f ? 1 : 0;
+  };
+  /** the floor's height where you stand, and whether that's on the stair */
+  const ground = (x: number, z: number) => {
+    for (const s of stairs) { const y = stairFloor(s, x, z); if (y !== null) return { y, stair: s }; }
+    return { y: baseOf(cur), stair: null };
+  };
+  const st = B.start;
+  setFloor(1);
   player.pos.set(st.x, EYE, st.z);
   player.yaw = THREE.MathUtils.degToRad(st.yaw); player.pitch = 0.02;
-  const inRoom = params.get('room') && arch.byId.get(params.get('room')!);
-  if (inRoom) { player.pos.set((inRoom.x0 + inRoom.x1) / 2, EYE, (inRoom.z0 + inRoom.z1) / 2); }
+  const inRoom = params.get('room') && B.rooms.find((r) => r.id === params.get('room'));
+  if (inRoom) { setFloor(inRoom.floor); player.pos.set((inRoom.x0 + inRoom.x1) / 2, EYE, (inRoom.z0 + inRoom.z1) / 2); }
   const at = params.get('at');
   if (at) {
-    const [x, z, yaw, pitch] = at.split(',').map(Number);
+    const [x, z, yaw, pitch, fl] = at.split(',').map(Number);
+    if (fl && arches.has(fl)) setFloor(fl);
     player.pos.set(x, EYE, z);
     player.yaw = THREE.MathUtils.degToRad(yaw || 0);
     player.pitch = THREE.MathUtils.degToRad(pitch || 0);
   }
   player.collide();
+  player.pos.y = ground(player.pos.x, player.pos.z).y + EYE;
+  /** after each step: the floor you're on (the upper flight past the landing is the second floor, the lower the
+      first), your eyes at the floor's height, and only your floor drawn — both, on the stair */
+  const settle = (dt: number) => {
+    const g = ground(player.pos.x, player.pos.z);
+    inStair = !!g.stair;
+    if (g.stair) {
+      const half = g.stair.rise / 2, upper = player.pos.z > (g.stair.aZ + g.stair.bZ) / 2;
+      if (upper && g.y > half + 0.3 && cur !== 2) setFloor(2);
+      if (!upper && g.y < half - 0.3 && cur !== 1) setFloor(1);
+    }
+    const want = g.y + EYE;
+    player.pos.y += (want - player.pos.y) * (dt > 0 ? Math.min(1, dt * 14) : 1);
+    for (const [f, it] of interiors) it.group.visible = f === cur || inStair;
+  };
+  settle(0);
 
   const hud = params.get('hud') !== '0';
   document.getElementById('dot')!.style.display = 'none';
@@ -160,19 +212,20 @@ async function start() {
   const failed = new Map<string, number>();
   const prep = (t: THREE.Texture) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = maxAniso; t.needsUpdate = true; return t; };
   const NEAR = 42, LABEL_NEAR = 16, TEXT_NEAR = 7, SHARP_NEAR = 9;
-  const dist = (p: Pic) => Math.hypot(p.mesh.position.x - player.pos.x, p.mesh.position.z - player.pos.z);
+  const dist = (p: Pic) => Math.hypot(p.mesh.position.x - player.pos.x, p.mesh.position.z - player.pos.z) + (floorOfPic.get(p) === cur ? 0 : 1e4);
   let pendingSharp = 1;
   function updatePictures() {
     pendingSharp = 0;
     const order = pictures.map((p) => ({ p, d: dist(p) })).sort((a, b) => a.d - b.d);
-    const hide = interior.far.geometry.getAttribute('aHide') as THREE.BufferAttribute;
-    let changed = false;
+    const hides = new Map(FLOORS.map((f) => [f, interiors.get(f)!.far.geometry.getAttribute('aHide') as THREE.BufferAttribute]));
+    const changed = new Set<number>();
     for (const { p, d } of order) {
-      const vis = d < NEAR;
+      const vis = d < NEAR, f = floorOfPic.get(p)!;
       if (vis !== p.mesh.visible || frames === 0) {
         p.mesh.visible = vis;
+        const hide = hides.get(f)!;
         for (let k = 0; k < p.farRange[1]; k++) hide.setX(p.farRange[0] + k, vis ? 1 : 0);
-        changed = true;
+        changed.add(f);
       }
       if (p.label) {
         p.label.visible = d < LABEL_NEAR;
@@ -205,7 +258,7 @@ async function start() {
         else { small.set(id, t); if (!sharp.has(id)) p.mat.uniforms.uMap.value = t; }
       }).catch(() => { loading.delete(id + want); failed.set(id + want, performance.now()); });
     }
-    if (changed) hide.needsUpdate = true;
+    for (const f of changed) hides.get(f)!.needsUpdate = true;
   }
   const blankLabel = pictures.find((p) => p.label)?.label?.material as THREE.Material;
 
@@ -216,7 +269,7 @@ async function start() {
   const targets = () => {
     const out: THREE.Object3D[] = [];
     for (const p of pictures) if (p.mesh.visible) out.push(p.mesh);
-    for (const o of interior.group.children) if (o.userData.face || o.userData.floor) out.push(o);
+    scene.traverseVisible((o) => { if (o !== scene && (o.userData.face || o.userData.floor)) out.push(o); });
     return out;
   };
   const local = new THREE.Vector3();
@@ -270,7 +323,7 @@ async function start() {
     const u = hit.object.userData, base = { point: hit.point, dist: hit.distance, ndc: ndc.clone() };
     if (u.work) return { kind: 'work', work: u.work, image: !!onImage(hit), ...base };
     if (u.face) return { kind: 'wall', ...base };
-    if (hit.point.y < 0.02) return { kind: 'floor', ...base };
+    if (u.floor || hit.point.y - baseOf(cur) < 0.02) return { kind: 'floor', ...base };
     return { kind: 'other', ...base };
   };
   new Touch(canvas, camera, player, pickAt, (hit) => {
@@ -310,6 +363,7 @@ async function start() {
       return;
     }
     if (open && focus.pic) { e.preventDefault(); openWork(focus.pic.work.id); }
+    if (e.code === 'KeyM' && !e.metaKey && !e.ctrlKey && !e.altKey) { e.preventDefault(); map.toggle(); }
   });
   document.addEventListener('pointerlockchange', () => {
     if (releasing) { releasing = false; return; }
@@ -317,6 +371,12 @@ async function start() {
   });
   const openParam = params.get('open');
   if (openParam) setTimeout(() => openWork(openParam), 300);
+
+  const sights = new Map(FLOORS.map((f) => [f, [...arches.get(f)!.sight, ...stairSolids]]));
+
+  /* ---- the map (bottom right; M) ------------------------------------------------------------------------------ */
+  const map = new FloorMap(B, (open) => { if (open && player.locked) { releasing = true; document.exitPointerLock(); } });
+  if (params.has('map')) setTimeout(() => map.toggle(true), 200);
 
   /* ---- the loop ------------------------------------------------------------------------------------------- */
   let lastT = performance.now(), frames = 0, slow = 0, picT = 0;
@@ -329,11 +389,13 @@ async function start() {
     if (dt > 0.024) slow += dt; else slow = Math.max(0, slow - dt * 0.5);
     if (slow > 1.5 && dpr > 1) { dpr = Math.max(1, dpr - 0.25); slow = 0; sizeAll(); }
     player.update(dt);
+    settle(dt);
     player.apply(camera);
+    map.update(player.pos.x, player.pos.z, player.yaw, cur);
     camera.updateMatrixWorld();
     if ((picT -= dt) <= 0) { picT = 0.25; updatePictures(); }
     if (viewer.open) focus.clear();
-    else focus.update(dt, camera, pictures.filter((p) => p.mesh.visible), arch.sight, true);
+    else focus.update(dt, camera, pictures.filter((p) => p.mesh.visible), sights.get(cur)!, true);
     mirror.render(renderer, scene, camera);
     renderer.render(scene, camera);
     const cross = player.locked && !touchOnly;
@@ -348,5 +410,6 @@ async function start() {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__g = { data, arch, items, unplaced, pictures, player, camera, renderer, scene, focus, viewer, openWork, roomAt: (x: number, z: number) => roomAt(arch, x, z)?.id, pendingSharp: () => pendingSharp };
+  window.__g = { data, arch, arches, items, unplaced, pictures, player, camera, renderer, scene, focus, viewer, openWork, map,
+    floor: () => cur, setFloor, ground, roomAt: (x: number, z: number) => roomAt(arches.get(cur)!, x, z)?.id, pendingSharp: () => pendingSharp };
 }

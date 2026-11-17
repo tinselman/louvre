@@ -20,6 +20,8 @@ export class FloorMirror {
   private tgt = new THREE.Vector3();
 
   far = 48;
+  /** the floor it mirrors: the height of the floor you're on */
+  set level(y: number) { this.p0.y = y; }
   constructor(w: number, h: number) {
     this.target = new THREE.WebGLRenderTarget(w, h, { type: THREE.HalfFloatType, depthBuffer: true });
     this.target.texture.generateMipmaps = false;

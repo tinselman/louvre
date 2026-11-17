@@ -3,7 +3,9 @@ side in until at least 85% of the strip just inside it is room (so window bays a
 import json, sys
 import numpy as np
 from PIL import Image, ImageDraw
-d = json.load(open('source/osm/denon1.json'))
+SRC = sys.argv[1] if len(sys.argv) > 1 else 'source/osm/denon1.json'
+DST = sys.argv[2] if len(sys.argv) > 2 else 'source/osm/cores.json'
+d = json.load(open(SRC))
 C = 0.1
 out = {}
 for e in d['els']:
@@ -25,5 +27,5 @@ for e in d['els']:
         if not moved or i1 - i0 < 5 or j1 - j0 < 5: break
     r = [round(x0 + i0 * C, 2), round(z0 + j0 * C, 2), round(x0 + (i1 + 1) * C, 2), round(z0 + (j1 + 1) * C, 2)]
     out[str(e['id'])] = {'name': e['name'], 'kind': e['kind'], 'bbox': [round(v, 2) for v in (x0, z0, x1, z1)], 'core': r}
-    print(f"{e['id']:>10} {e['name'][:30]:30} bbox {x0:8.2f} {z0:8.2f} {x1:8.2f} {z1:8.2f}  core {r}")
-json.dump(out, open('source/osm/cores.json', 'w'), ensure_ascii=False, indent=1)
+    if len(sys.argv) < 4: print(f"{e['id']:>10} {e['name'][:30]:30} bbox {x0:8.2f} {z0:8.2f} {x1:8.2f} {z1:8.2f}  core {r}")
+json.dump(out, open(DST, 'w'), ensure_ascii=False, indent=1)

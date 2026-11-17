@@ -23,7 +23,8 @@ const r = await page.evaluate(() => {
   for (const it of g.items) { if (!it.face) continue; if (!byFace.has(it.face)) byFace.set(it.face, []); byFace.get(it.face).push(it); }
   let overlaps = 0, doorHits = 0, outside = 0, labelHits = 0;
   for (const [f, list] of byFace) {
-    const box = (it) => [along(it) - it.ow / 2, along(it) + it.ow / 2, it.pos[1] - it.oh / 2, it.pos[1] + it.oh / 2];
+    const y = (it) => it.pos[1] - f.room.y;   // above its own floor
+    const box = (it) => [along(it) - it.ow / 2, along(it) + it.ow / 2, y(it) - it.oh / 2, y(it) + it.oh / 2];
     for (let i = 0; i < list.length; i++) {
       const a = box(list[i]);
       if (a[0] < f.u0 - 1e-3 || a[1] > f.u1 + 1e-3 || a[2] < 0.1 || a[3] > (f.lunette ? f.room.top : f.h)) { outside++; out.push(`outside ${list[i].work.title}`); }
@@ -34,7 +35,7 @@ const r = await page.evaluate(() => {
       }
       const L = list[i].label;
       if (L) {
-        const lu = f.axis === 'x' ? L[0] : L[2], lb = [lu - 0.085, lu + 0.085, L[1] - 0.06, L[1] + 0.06];
+        const lu = f.axis === 'x' ? L[0] : L[2], ly = L[1] - f.room.y, lb = [lu - 0.085, lu + 0.085, ly - 0.06, ly + 0.06];
         for (const o of list) { const b = box(o); if (lb[1] > b[0] && b[1] > lb[0] && lb[3] > b[2] && b[3] > lb[2]) { labelHits++; out.push(`label ${list[i].work.title} on ${o.work.title}`); break; } }
         if (lb[0] < f.u0 || lb[1] > f.u1) { labelHits++; out.push(`label off wall ${list[i].work.title}`); }
       }
@@ -42,9 +43,12 @@ const r = await page.evaluate(() => {
   }
   // every room reachable through doorways from where you start
   const B = g.data.building, seen = new Set([g.roomAt(B.start.x, B.start.z)]), q = [...seen];
-  while (q.length) { const r = q.pop(); for (const d of B.doors) for (const [a, b] of [[d.a, d.b], [d.b, d.a]]) if (a === r && !seen.has(b)) { seen.add(b); q.push(b); } }
+  const stairs = B.rooms.filter((r) => r.stair).map((r) => r.id);
+  while (q.length) { const r = q.pop(); if (stairs.includes(r)) for (const o of stairs) if (!seen.has(o)) { seen.add(o); q.push(o); }
+    for (const d of B.doors) for (const [a, b] of [[d.a, d.b], [d.b, d.a]]) if (a === r && !seen.has(b)) { seen.add(b); q.push(b); } }
   const lost = B.rooms.filter((r) => !seen.has(r.id)).map((r) => r.id);
-  return { works: g.data.works.length, hung: g.items.length, unplaced: g.unplaced.length, overlaps, doorHits, outside, labelHits, lost, sample: out.slice(0, 12) };
+  const perFloor = {}; for (const it of g.items) { const f = g.data.building.rooms.find((r) => r.id === it.work.room)?.floor; perFloor[f] = (perFloor[f] ?? 0) + 1; }
+  return { works: g.data.works.length, hung: g.items.length, perFloor, unplacedList: Object.entries(g.unplaced.reduce((m, w) => (m[w.room] = (m[w.room] ?? 0) + 1, m), {})).map(([r, n]) => `${r}:${n}/${g.data.works.filter((w) => w.room === r).length}`).join(" "), unplaced: g.unplaced.length, overlaps, doorHits, outside, labelHits, lost, sample: out.slice(0, 12) };
 });
 console.log(JSON.stringify(r, null, 1));
 if (errors.length) console.log('page errors:', errors.slice(0, 5));

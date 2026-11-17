@@ -81,3 +81,41 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
   `npm run build` here → copy `dist/` over louvre-site (keep its .git and .nojekyll) → commit there → `git push`.
   Ordinary pushes only; he sees the old page for ~10 min in Safari — tell him Cmd-Option-R.
 - Commits are by RobynMiller <RobynMiller@mac.lan> (set in both folders' git config) — never his Gmail.
+
+## The second floor, the stair, the map (2026-11-16 night, his "do second floor … create a map … small X in upper right corner closes the map")
+- **Floor 2** = Richelieu (Dutch, Flemish, German, early French) and Sully (French, round the Cour Carrée), from
+  OpenStreetMap levels 2 and 2.25 (`tools/floor2_geom.py` turns it in the same frame as floor 1 → `source/osm/cores2.json`).
+  `tools/building.py` makes ~130 floor-2 rooms; rooms OSM lacks (914, 916–918, 922–923, 925–926 redrawn, 931) are
+  Claude's reading; a few joins tidied so neighbours meet (Lefuel landing, 829→830, 936, 944, 813). OSM maps no
+  doorways on floor 2, so every two rooms facing across a wall over ≥2 m get one in the middle (≤3.2 m wide).
+  Floor 2 sits 8 m above floor 1 (stylised). Heights: cabinets 5.2 m, rooms 5.8, big rooms 6.5, all top-lit
+  (it's the top floor); 801 the Medici gallery a vault.
+- **The way up**: Salle des verres (661) → Salon des Sept-Cheminées (660) → Salle Henri II (662) → Salle des Bronzes
+  (663) → a passage → **Escalier Henri II** (where OSM has it): two flights side by side, a landing at 4 m, a parting
+  wall topped as a rail. Room `s1` (floor 1's part, walls to 8 m, no ceiling) and `s2` (floor 2's, top-lit cove) over
+  the same plan; `B.stairs` gives the flights. You change floor on the upper flight above the landing (and back on
+  the lower). `node tools/stairwalk.mjs` walks it both ways with the W key.
+- **Engine**: rooms have `floor` and `y`; `buildArch(B, floor)` one floor at a time; `facePoint` adds the floor's
+  height; the shaders take `uBase` (skirting, shade, skylight measured from the room's own floor); the floor you're not
+  on isn't drawn (both are, on the stair); the mirror follows your floor (`mirror.level`); pictures on the other floor
+  count as far away.
+- **Hanging**: 2,165 paintings (625 floor 1, 1,540 floor 2). Crowded rooms hang closer, small ones up to five high (as
+  the Louvre's cabinets are); a label goes under its painting when there's no room beside it; a room with more
+  paintings than wall lends the rest to a room next door (or two doors away) with wall to spare — Claude's, so none
+  is left out. `node tools/check.mjs` PASS.
+- **The map** (`src/map.ts`): round button bottom right (or M); the floor you're on, every room and number, doorways,
+  the stair, you (red dot, which way you face); tabs for the other floor; the X in its top-right corner (or M/Esc) closes.
+  `?map=1` opens it (tests).
+- Frame times 1.8–4.5 ms at retina in ten places, both floors and the stair (`node tools/fps.mjs 2`). WebKit renders.
+- Pictures: 611 local; Wikimedia throttled this Mac (429) during the floor-2 download — `tools/images.py` keeps going,
+  stubborn ones last (`source/images-failed.json`). Until a picture is local the page loads it from Commons.
+
+## Sculptures (asked 2026-11-16: "sculptures should be color mapped")
+- Which: `tools/wikidata_sculpt.py` (2,917 Louvre sculptures on Wikidata) → `louvre_rooms.py` → `source/louvre_sculpt.jsonl`.
+  They stand on the ground floor and below (Richelieu 0/-1, Sully 0, Denon 0/-1) — none in the painting floors, except
+  the Winged Victory on the Daru landing (our `daru` room).
+- Colour scans: no openly licensed, texture-mapped scan of the Louvre marble exists. Best: Cosmo Wenman's scan of the
+  Skulpturhalle Basel cast (Sketchfab 4edd6459f2834e7ab0b395e71cee2513, CC-BY, 9 textures, 283k faces; the cast's
+  brown paint, not her marble). p_moraiti's CC-BY scan has no textures (one tan material, lumpy); dan.myrtz / zrhyes /
+  melina.osteo are souvenir replicas. Sketchfab downloads need a signed-in account; Thingiverse is behind Cloudflare's
+  robot check (not to be got round). Waiting on Robyn.

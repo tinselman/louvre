@@ -22,6 +22,8 @@ export interface Face {
   lunette: boolean;
 }
 export interface Arch {
+  /** which floor, and the height of its floor */
+  floor: number; base: number;
   rooms: Room[]; byId: Map<string, Room>;
   faces: Face[];
   reveals: { p: [number, number, number][]; n: [number, number, number] }[];
@@ -34,18 +36,19 @@ export interface Arch {
 
 const STRIP = 0.35;                  // how thick a wall is, for bumping into, behind each face
 
-export function buildArch(B: Building): Arch {
-  const byId = new Map(B.rooms.map((r) => [r.id, r]));
+export function buildArch(B: Building, floor = 1): Arch {
+  const rooms = B.rooms.filter((r) => r.floor === floor);
+  const byId = new Map(rooms.map((r) => [r.id, r]));
   const faces: Face[] = [];
   const reveals: Arch['reveals'] = [];
   const thresholds: Arch['thresholds'] = [];
   const solids: Rect[] = [];
   const doorsOn = (r: Room, axis: Axis, plane: number): [number, number, number][] =>
-    B.doors.filter((d) => d.wall === axis && ((d.a === r.id && Math.abs(d.pa - plane) < 1e-3) || (d.b === r.id && Math.abs(d.pb - plane) < 1e-3)))
+    B.doors.filter((d) => byId.has(d.a) && byId.has(d.b) && d.wall === axis && ((d.a === r.id && Math.abs(d.pa - plane) < 1e-3) || (d.b === r.id && Math.abs(d.pb - plane) < 1e-3)))
       .map((d) => [d.u0, d.u1, d.h] as [number, number, number]);
 
-  for (const r of B.rooms) {
-    const flat = r.ceiling === 'flat';
+  for (const r of rooms) {
+    const flat = r.ceiling === 'flat' || r.ceiling === 'none';
     const sides: { axis: Axis; plane: number; u0: number; u1: number; n: [number, number] }[] = [
       { axis: 'x', plane: r.z0, u0: r.x0, u1: r.x1, n: [0, 1] },
       { axis: 'x', plane: r.z1, u0: r.x0, u1: r.x1, n: [0, -1] },
@@ -75,9 +78,10 @@ export function buildArch(B: Building): Arch {
   }
   // each doorway once: its passage through the wall (jambs, head, the floor across it) and its sides, to bump into
   for (const d of B.doors) {
+    if (!byId.has(d.a) || !byId.has(d.b)) continue;
     const lo = Math.min(d.pa, d.pb), hi = Math.max(d.pa, d.pb);
-    const A = byId.get(d.a)!;
-    const P = (u: number, y: number, c: number): [number, number, number] => (d.wall === 'x' ? [u, y, c] : [c, y, u]);
+    const A = byId.get(d.a)!, base = Math.max(A.y, byId.get(d.b)!.y);
+    const P = (u: number, y: number, c: number): [number, number, number] => (d.wall === 'x' ? [u, y + base, c] : [c, y + base, u]);
     const jamb = (u: number, into: number) => {
       // a vertical face at u, across the wall from lo to hi, facing along the wall toward the opening's middle
       const p = [P(u, 0, lo), P(u, 0, hi), P(u, d.h, hi), P(u, d.h, lo)];
@@ -93,7 +97,8 @@ export function buildArch(B: Building): Arch {
   }
   // free-standing walls: two faces, ends and a top
   for (const w of B.walls) {
-    const r = byId.get(w.room)!;
+    const r = byId.get(w.room);
+    if (!r) continue;
     const ax: Axis = Math.abs(w.z1 - w.z0) < 1e-6 ? 'x' : 'z';
     const c = ax === 'x' ? w.z0 : w.x0, t = w.t / 2;
     const u0 = ax === 'x' ? Math.min(w.x0, w.x1) : Math.min(w.z0, w.z1), u1 = ax === 'x' ? Math.max(w.x0, w.x1) : Math.max(w.z0, w.z1);
@@ -101,7 +106,7 @@ export function buildArch(B: Building): Arch {
       const n: [number, number] = ax === 'x' ? [0, side] : [side, 0];
       faces.push({ key: `${w.id}:${side}`, room: r, axis: ax, plane: c + side * t, u0, u1, n, right: [n[1], -n[0]], h: w.h, doors: [], cornerA: false, cornerB: false, free: w, lunette: false });
     }
-    const P = (u: number, y: number, v: number): [number, number, number] => (ax === 'x' ? [u, y, v] : [v, y, u]);
+    const P = (u: number, y: number, v: number): [number, number, number] => (ax === 'x' ? [u, y + r.y, v] : [v, y + r.y, u]);
     for (const [u, s] of [[u0, -1], [u1, 1]] as const) {
       reveals.push({ p: [P(u, 0, c - t), P(u, 0, c + t), P(u, w.h, c + t), P(u, w.h, c - t)], n: ax === 'x' ? [s, 0, 0] : [0, 0, s] });
     }
@@ -109,17 +114,17 @@ export function buildArch(B: Building): Arch {
     solids.push(ax === 'x' ? { x0: u0, x1: u1, z0: c - t, z1: c + t } : { x0: c - t, x1: c + t, z0: u0, z1: u1 });
   }
   const sight = [...solids];
-  for (const r of B.rails ?? []) solids.push({ x0: Math.min(r.x0, r.x1) - 0.05, x1: Math.max(r.x0, r.x1) + 0.05, z0: Math.min(r.z0, r.z1) - 0.05, z1: Math.max(r.z0, r.z1) + 0.05 });
+  for (const r of (B.rails ?? []).filter((q) => byId.has(q.room))) solids.push({ x0: Math.min(r.x0, r.x1) - 0.05, x1: Math.max(r.x0, r.x1) + 0.05, z0: Math.min(r.z0, r.z1) - 0.05, z1: Math.max(r.z0, r.z1) + 0.05 });
   const bounds = {
     x0: Math.min(...B.rooms.map((r) => r.x0)) - 2, x1: Math.max(...B.rooms.map((r) => r.x1)) + 2,
     z0: Math.min(...B.rooms.map((r) => r.z0)) - 2, z1: Math.max(...B.rooms.map((r) => r.z1)) + 2,
   };
-  return { rooms: B.rooms, byId, faces, reveals, thresholds, solids, sight, bounds };
+  return { floor, base: rooms[0]?.y ?? 0, rooms, byId, faces, reveals, thresholds, solids, sight, bounds };
 }
 
-/** where a point of a face is, in the world */
+/** where a point of a face is, in the world (y above its own floor) */
 export const facePoint = (f: Face, u: number, y: number): [number, number, number] =>
-  f.axis === 'x' ? [u, y, f.plane] : [f.plane, y, u];
+  f.axis === 'x' ? [u, y + f.room.y, f.plane] : [f.plane, y + f.room.y, u];
 /** how far along the face's own right a world u is (so 'to the right' is +) */
 export const rightSign = (f: Face) => (f.axis === 'x' ? f.right[0] : f.right[1]);
 

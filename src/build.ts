@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { Arch, Face } from './arch';
 import { facePoint, vaultY } from './arch';
-import type { Room, Work } from './model';
+import type { Room, Work, Stair } from './model';
 import { titleOf, sizeText } from './model';
 import type { Item, Title } from './hang';
 import { LABEL_W, LABEL_H } from './hang';
@@ -53,16 +53,21 @@ class Geo {
 
 /* ---- the skylight over each room ------------------------------------------------------------------------- */
 function skyOf(r: Room): SkyRefs {
-  const none = { rect: new THREE.Vector4(0, 0, 0, 0), top: r.top };
+  // the stair's two parts are lit as one tall room under the second floor's skylight, from the first floor up
+  if (r.stair && r.wallTop) {
+    const s = skyRect({ ...r, ceiling: 'cove', spring: 6.5, top: 8 });
+    return { rect: s ? new THREE.Vector4(s.x0, s.z0, s.x1, s.z1) : new THREE.Vector4(0, 0, 0, 0), top: r.wallTop, base: 0 };
+  }
+  const none = { rect: new THREE.Vector4(0, 0, 0, 0), top: r.top, base: r.y };
   if (!r.sky) return none;
   if (r.ceiling === 'vault') {
     const W = r.axis === 'x' ? r.z1 - r.z0 : r.x1 - r.x0, half = (r.sky * W) / 2;
     return r.axis === 'x'
-      ? { rect: new THREE.Vector4(r.x0 + 1, (r.z0 + r.z1) / 2 - half, r.x1 - 1, (r.z0 + r.z1) / 2 + half), top: r.top }
-      : { rect: new THREE.Vector4((r.x0 + r.x1) / 2 - half, r.z0 + 1, (r.x0 + r.x1) / 2 + half, r.z1 - 1), top: r.top };
+      ? { rect: new THREE.Vector4(r.x0 + 1, (r.z0 + r.z1) / 2 - half, r.x1 - 1, (r.z0 + r.z1) / 2 + half), top: r.top, base: r.y }
+      : { rect: new THREE.Vector4((r.x0 + r.x1) / 2 - half, r.z0 + 1, (r.x0 + r.x1) / 2 + half, r.z1 - 1), top: r.top, base: r.y };
   }
   const s = skyRect(r);
-  return s ? { rect: new THREE.Vector4(s.x0, s.z0, s.x1, s.z1), top: r.top } : none;
+  return s ? { rect: new THREE.Vector4(s.x0, s.z0, s.x1, s.z1), top: r.top, base: r.y } : none;
 }
 /** a flat or coved ceiling's skylight: a margin all round, the same on every side */
 function skyRect(r: Room) {
@@ -105,6 +110,7 @@ function faceGeo(f: Face, c0: number, c1: number) {
 /* ---- the ceiling over a room ------------------------------------------------------------------------------ */
 function ceilingGeo(r: Room) {
   const plaster = new Geo(), glass = new Geo();
+  if (r.ceiling === 'none') return { plaster, glass };
   const down = [0, -1, 0];
   if (r.ceiling === 'vault') {
     const along = r.axis, W = along === 'x' ? r.z1 - r.z0 : r.x1 - r.x0, c = along === 'x' ? (r.z0 + r.z1) / 2 : (r.x0 + r.x1) / 2;
@@ -297,15 +303,20 @@ export interface Pic {
   /** its patch in the far mesh: first vertex, how many */
   farRange: [number, number];
 }
-export interface Interior { group: THREE.Group; pictures: Pic[]; far: THREE.Mesh; floors: THREE.Mesh[]; dispose(): void }
+export interface Interior {
+  group: THREE.Group; pictures: Pic[]; far: THREE.Mesh; floors: THREE.Mesh[];
+  /** the stair's part on this floor (its walls and top), shown from either floor */
+  stair: THREE.Group;
+  dispose(): void;
+}
 
 export function buildInterior(A: Arch, items: Item[], titles: Title[], textureOf: (id: string) => THREE.Texture,
                               pxOf: (id: string) => [number, number] | undefined, colourOf: (id: string) => string,
                               refl: THREE.Texture, texMat: THREE.Matrix4): Interior {
-  const group = new THREE.Group();
+  const group = new THREE.Group(), stair = new THREE.Group();
   const geos: THREE.BufferGeometry[] = [], mats: THREE.Material[] = [], texs: THREE.Texture[] = [];
-  const add = (g: THREE.BufferGeometry, m: THREE.Material, layer = 0) => {
-    geos.push(g); const x = new THREE.Mesh(g, m); group.add(x); if (layer) x.layers.set(layer); return x;
+  const add = (g: THREE.BufferGeometry, m: THREE.Material, layer = 0, into = group) => {
+    geos.push(g); const x = new THREE.Mesh(g, m); into.add(x); if (layer) x.layers.set(layer); return x;
   };
   const skies = new Map(A.rooms.map((r) => [r.id, skyOf(r)]));
   const plasterOf = new Map(A.rooms.map((r) => { const m = plasterMaterial(new THREE.Color(WHITE_CEILING), skies.get(r.id)!); mats.push(m); return [r.id, m]; }));
@@ -326,16 +337,16 @@ export function buildInterior(A: Arch, items: Item[], titles: Title[], textureOf
         .map((it) => ({ c: v3(it.pos), s: new THREE.Vector3(it.ow / 2, it.oh / 2, it.depth) }));
       const m = wallMaterial({
         normal: new THREE.Vector3(f.n[0], 0, f.n[1]), right: new THREE.Vector3(f.right[0], 0, f.right[1]), axisX: f.axis === 'x',
-        u0: f.u0, u1: f.u1, cornerA: f.cornerA, cornerB: f.cornerB, spring: f.lunette ? f.room.top : f.h, boxes,
+        u0: f.u0, u1: f.u1, cornerA: f.cornerA, cornerB: f.cornerB, spring: f.room.wallTop ?? (f.lunette ? f.room.top : f.h), boxes,
       }, wallWhite, skies.get(f.room.id)!);
       mats.push(m);
-      add(g.geometry(), m).userData.face = f;
+      add(g.geometry(), m, 0, f.room.stair ? stair : group).userData.face = f;
     }
   }
   // doorway reveals and the ends and tops of free walls
   const rev = new Geo();
   for (const q of A.reveals) rev.quad(q.p, q.n);
-  const revMat = plasterMaterial(new THREE.Color(WHITE_WALL), { rect: new THREE.Vector4(0, 0, 0, 0), top: 10 });
+  const revMat = plasterMaterial(new THREE.Color(WHITE_WALL), { rect: new THREE.Vector4(0, 0, 0, 0), top: 10, base: A.base });
   mats.push(revMat);
   add(rev.geometry(), revMat);
 
@@ -343,14 +354,16 @@ export function buildInterior(A: Arch, items: Item[], titles: Title[], textureOf
   const glassMat = skylightMaterial(); mats.push(glassMat);
   for (const r of A.rooms) {
     const { plaster, glass } = ceilingGeo(r);
-    if (!plaster.empty) add(plaster.geometry(), plasterOf.get(r.id)!);
-    if (!glass.empty) add(glass.geometry(), glassMat);
+    const into = r.stair ? stair : group;
+    if (!plaster.empty) add(plaster.geometry().translate(0, r.y, 0), plasterOf.get(r.id)!, 0, into);
+    if (!glass.empty) add(glass.geometry().translate(0, r.y, 0), glassMat, 0, into);
   }
 
   // floors: each room with the shade along its own walls; a doorway's floor goes with the first of its rooms
   const floors: THREE.Mesh[] = [];
   const floorMats = new Map<string, THREE.ShaderMaterial>();
   for (const r of A.rooms) {
+    if (r.stair) continue;                          // (the stair's flights are its floor)
     const segs: THREE.Vector4[] = [];
     for (const f of A.faces.filter((q) => q.room === r)) {
       if (f.free) {
@@ -366,8 +379,9 @@ export function buildInterior(A: Arch, items: Item[], titles: Title[], textureOf
     const m = floorMaterial(refl, texMat, segs, skies.get(r.id)!);
     mats.push(m); floorMats.set(r.id, m);
     const g = new Geo();
-    g.quad([[r.x0, 0, r.z0], [r.x1, 0, r.z0], [r.x1, 0, r.z1], [r.x0, 0, r.z1]], [0, 1, 0]);
-    for (const t of A.thresholds.filter((q) => q.room === r)) g.quad([[t.r.x0, 0, t.r.z0], [t.r.x1, 0, t.r.z0], [t.r.x1, 0, t.r.z1], [t.r.x0, 0, t.r.z1]], [0, 1, 0]);
+    const y = r.y;
+    g.quad([[r.x0, y, r.z0], [r.x1, y, r.z0], [r.x1, y, r.z1], [r.x0, y, r.z1]], [0, 1, 0]);
+    for (const t of A.thresholds.filter((q) => q.room === r)) g.quad([[t.r.x0, y, t.r.z0], [t.r.x1, y, t.r.z0], [t.r.x1, y, t.r.z1], [t.r.x0, y, t.r.z1]], [0, 1, 0]);
     const fm = add(g.geometry(), m, 1);             // layer 1: never drawn into its own reflection
     fm.userData.floor = r.id;
     floors.push(fm);
@@ -439,9 +453,58 @@ export function buildInterior(A: Arch, items: Item[], titles: Title[], textureOf
   pictures.forEach((p, i) => { p.farRange = ranges[i]; });
 
   return {
-    group, pictures, far: farMesh, floors,
+    group, pictures, far: farMesh, floors, stair,
     dispose() { for (const g of geos) g.dispose(); for (const m of mats) m.dispose(); for (const t of texs) t.dispose(); },
   };
+}
+
+/* ---- the stair between the floors: two flights of pale stone, the landing between them, and the wall that parts
+   them (topped as a rail along the upper flight). How high the floor is at any point of it: stairFloor. ---------- */
+export const STEP = 0.16;
+export function stairFloor(s: Stair, x: number, z: number): number | null {
+  if (x < s.x0 || x > s.x1 || z < s.z0 || z > s.z1) return null;
+  const half = s.rise / 2, t = Math.max(0, Math.min(1, (s.xE - x) / (s.xE - s.xL)));
+  if (x <= s.xL) return half;
+  return z < (s.aZ + s.bZ) / 2 ? half * t : s.rise - half * t;
+}
+export function stairGeometry(s: Stair) {
+  const group = new THREE.Group();
+  const tread = new Geo(), riser = new Geo(), wall = new Geo();
+  const half = s.rise / 2, n = Math.round(half / STEP), run = (s.xE - s.xL) / n;
+  // band A: from the first floor at xE up (west) to the landing; band B: from the landing up (east) to the second
+  for (let k = 0; k < n; k++) {
+    // A: step k is the k-th from the bottom, its riser facing east
+    const ax1 = s.xE - k * run, ax0 = ax1 - run, ay0 = k * STEP, ay1 = (k + 1) * STEP;
+    riser.quad([[ax1, ay0, s.z0], [ax1, ay0, s.aZ], [ax1, ay1, s.aZ], [ax1, ay1, s.z0]], [1, 0, 0]);
+    tread.quad([[ax0, ay1, s.z0], [ax1, ay1, s.z0], [ax1, ay1, s.aZ], [ax0, ay1, s.aZ]], [0, 1, 0]);
+    // B: step k from the landing, its riser facing west
+    const bx0 = s.xL + k * run, bx1 = bx0 + run, by0 = half + k * STEP, by1 = half + (k + 1) * STEP;
+    riser.quad([[bx0, by0, s.bZ], [bx0, by0, s.z1], [bx0, by1, s.z1], [bx0, by1, s.bZ]], [-1, 0, 0]);
+    tread.quad([[bx0, by1, s.bZ], [bx1, by1, s.bZ], [bx1, by1, s.z1], [bx0, by1, s.z1]], [0, 1, 0]);
+  }
+  // the landing, the foot of band A and the head of band B (flat, by the doorways)
+  tread.quad([[s.x0, half, s.z0], [s.xL, half, s.z0], [s.xL, half, s.z1], [s.x0, half, s.z1]], [0, 1, 0]);
+  tread.quad([[s.xE, 0, s.z0], [s.x1, 0, s.z0], [s.x1, 0, s.aZ], [s.xE, 0, s.aZ]], [0, 1, 0]);
+  tread.quad([[s.xE, s.rise, s.bZ], [s.x1, s.rise, s.bZ], [s.x1, s.rise, s.z1], [s.xE, s.rise, s.z1]], [0, 1, 0]);
+  // the parting wall, as high as band B's floor plus a rail's height, from the landing to the east wall
+  const top = (x: number) => (x <= s.xL ? half : x >= s.xE ? s.rise : half + half * (x - s.xL) / (s.xE - s.xL)) + 1.0;
+  const xs = [s.xL, s.xE, s.x1];
+  for (let k = 0; k + 1 < xs.length; k++) {
+    const x0 = xs[k], x1 = xs[k + 1];
+    wall.quad([[x0, 0, s.aZ], [x1, 0, s.aZ], [x1, top(x1), s.aZ], [x0, top(x0), s.aZ]], [0, 0, -1]);
+    wall.quad([[x0, 0, s.bZ], [x1, 0, s.bZ], [x1, top(x1), s.bZ], [x0, top(x0), s.bZ]], [0, 0, 1]);
+    wall.quad([[x0, top(x0), s.aZ], [x1, top(x1), s.aZ], [x1, top(x1), s.bZ], [x0, top(x0), s.bZ]], [0, 1, 0]);
+  }
+  wall.quad([[s.xL, 0, s.aZ], [s.xL, 0, s.bZ], [s.xL, top(s.xL), s.bZ], [s.xL, top(s.xL), s.aZ]], [-1, 0, 0]);
+  const stone = new THREE.MeshStandardMaterial({ color: 0xf4f2ed, roughness: 0.85 });
+  const face = new THREE.MeshStandardMaterial({ color: 0xf0eee8, roughness: 0.9 });
+  const plain = new THREE.MeshStandardMaterial({ color: WHITE_WALL, roughness: 0.95 });
+  for (const [g, m] of [[tread, stone], [riser, face], [wall, plain]] as [Geo, THREE.Material][]) {
+    const x = new THREE.Mesh(g.geometry(), m);
+    x.userData.floor = g === tread ? s.id : undefined;
+    group.add(x);
+  }
+  return group;
 }
 
 /* ---- rails: white posts and a round top rail ---------------------------------------------------------------- */

@@ -1,4 +1,5 @@
-"""data/works.json: every painting the Louvre lists in a Denon first-floor room we built, with a public-domain picture
+"""data/works.json: every painting the Louvre lists in a room we built (Denon first floor; Richelieu and Sully second
+floor — with --all, every second-floor room, built or not, so their pictures can be fetched ahead), with a public-domain picture
 on Wikimedia Commons (through Wikidata). Titles and artists in English where Wikidata has them, else the Louvre's
 French; date, medium (put into English) and size from the Louvre's record (Etalab Open Licence). Sizes in metres:
 w, h the painting itself; fw the frame's width each side when the Louvre gives the size with frame."""
@@ -6,6 +7,8 @@ import json, re, sys, collections, hashlib
 wd = {e['ark'].removeprefix('cl'): e for e in json.load(open('source/wikidata.json'))}
 B = json.load(open('data/building.json'))
 rooms = {r['id'] for r in B['rooms'] if r['hang']}
+ALL = '--all' in sys.argv
+args = [a for a in sys.argv[1:] if not a.startswith('--')]
 MED = [(r'huile', 'oil'), (r'tempera|détrempe', 'tempera'), (r'sur toile', 'on canvas'), (r'sur bois', 'on wood'),
        (r'sur cuivre', 'on copper'), (r'sur papier', 'on paper'), (r'sur ardoise', 'on slate'), (r'sur marbre', 'on marble'),
        (r'transposée? sur toile', 'transferred to canvas'), (r'\(peuplier\)', '(poplar)'), (r'\(chêne\)', '(oak)'),
@@ -38,10 +41,11 @@ for line in open('source/louvre.jsonl'):
     try: r = json.loads(line)
     except ValueError: continue          # (a line still being written)
     if r.get('missing') or not r.get('room'): continue
-    m = re.match(r'Salle (\w+), Aile Aile Denon, Niveau 1', r['room'])
+    m = re.match(r'Salle (\w+), Aile (?:Aile )?(Denon|Richelieu|Sully), Niveau (\d)', r['room'])
     if not m: continue
-    room = m.group(1)
-    if room not in rooms: why['room not built: ' + room] += 1; continue
+    room, wing, level = m.group(1), m.group(2), int(m.group(3))
+    if not ((wing == 'Denon' and level == 1) or level == 2 or room in rooms): continue
+    if room not in rooms and not (ALL and level == 2): why['room not built: ' + room] += 1; continue
     ark = r['arkId'].removeprefix('cl')
     if ark in seen: continue
     seen.add(ark)
@@ -62,9 +66,9 @@ for line in open('source/louvre.jsonl'):
     title = w['label'] if w['label'] and not re.match(r'^Q\d+$', w['label']) else r['title']
     out.append(dict(id=ark, title=title, fr=r['title'], artist=artist, date=date, year=sortyear,
                     medium=english(r.get('materialsAndTechniques')), w=round(W, 3), h=round(H, 3), fw=fw,
-                    room=room, inv=inv, q=w['q'], img=w['img'], cpath=cpath(w['img'])))
+                    room=room, floor=level, wing=wing, inv=inv, q=w['q'], img=w['img'], cpath=cpath(w['img'])))
 out.sort(key=lambda e: (e['room'], e['year'], e['artist']))
-json.dump(out, open(sys.argv[1] if len(sys.argv) > 1 else 'data/works.json', 'w'), ensure_ascii=False, indent=0)
+json.dump(out, open(args[0] if args else 'data/works.json', 'w'), ensure_ascii=False, indent=0)
 c = collections.Counter(e['room'] for e in out)
 print(len(out), 'works to hang:', dict(sorted(c.items())))
-print('left out:', dict(why))
+print('left out:', {k: v for k, v in why.items() if not k.startswith('room not built')}, '; in rooms not built:', sum(v for k, v in why.items() if k.startswith('room not built')))
