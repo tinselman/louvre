@@ -154,3 +154,11 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
   hall. Room floors keep their gloss only while the mirror is within 0.5 m of their height. The stair is on layer 1,
   as the floors (a glossy surface can't be drawn into its own mirror).
 - check.mjs PASS, stairwalk both ways, frame times 2.7–5.9 ms, WebKit renders it.
+
+## Published 2026-11-17 12:11 (his "Yes, when done")
+- All 2,165 pictures local (`tools/images.py` finished: 1,534 in ~95 min at PACE 3, no refusals once the site was
+  named). Studio 66cbc6f → main 3bd63e3: pictures, the Winged Victory, the stair's concrete and rounded steps.
+- The previous build's script (assets/index-BIhouE2z.js) kept on main, so a stale page loads, sees version.json and
+  reloads; drop it next publish. One 503 from Pages in the first minute after the push (gone on retry).
+- `node tools/requests.mjs <url> "x,z,yaw,pitch,floor"` lists any request at that spot that comes back 400+.
+- Still on studio: `.github/workflows/pictures.yml` (harmless; delete it on github.com — see above).
