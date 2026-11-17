@@ -185,3 +185,8 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
   The photos as they were stay in source/art-orig/ (not committed — run `apply` again from them).
 - `node tools/facing.mjs <dir> <id> …` stands in front of paintings and saves a picture of each (headless).
 - Not looked at: camera photos the finder found no outline in (a frame on fewer than 3 sides).
+
+## Published 2026-11-17 (his "Yes, publish") — the squared pictures
+- Studio c01a695 → main 3c58293 (version mwlbuebc). Dropped index-BIhouE2z.js; kept index-DXn9K2lp.js (the build
+  before) for stale pages — drop it next publish. Live check: the straightened files served, `requests.mjs` at the
+  Victory 160 responses, none bad.
