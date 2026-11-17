@@ -9,7 +9,7 @@ p.on('pageerror', (e) => errs.push(e.message));
 p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
 p.on('requestfailed', (r) => errs.push('failed ' + r.url().slice(0, 100)));
 await p.setViewport({ width: 1400, height: 860 });
-await p.goto(url + '?hud=0&at=-3,-26.5,180,0', { waitUntil: 'load' });
+await p.goto(url + '?hud=0' + (process.argv[4] ? '&at=' + process.argv[4] : '&at=-3,-26.5,180,0'), { waitUntil: 'load' });
 await p.waitForFunction('window.__gReady === true', { timeout: 60000 });
 await new Promise((r) => setTimeout(r, 5000));
 await p.screenshot({ path: out });

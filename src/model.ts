@@ -44,7 +44,7 @@ export interface Work {
 export interface Pix { px: [number, number]; l: string; c: string; file: string }
 /** colour corrections (kept from the Portrait gallery's shader; unused here) */
 export interface Adjust { b?: number; c?: number; s?: number; t?: number; sh?: number; hl?: number }
-export interface Data { building: Building; works: Work[]; images: Record<string, Pix> }
+export interface Data { building: Building; works: Work[]; images: Record<string, Pix>; sculptures: import('./sculpture').Sculpture[] }
 
 export async function loadData(): Promise<Data> {
   const get = async (name: string) => {
@@ -53,7 +53,9 @@ export async function loadData(): Promise<Data> {
     return r.json();
   };
   const [building, works, images] = await Promise.all([get('building'), get('works'), get('images')]);
-  return { building, works, images };
+  // the sculptures are optional (none until a scan is in)
+  const sculptures = await fetch('data/sculptures.json', { cache: 'no-cache' }).then((r) => (r.ok ? r.json() : [])).catch(() => []);
+  return { building, works, images, sculptures };
 }
 
 /* The words on a label and under the full view. */

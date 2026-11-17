@@ -49,13 +49,13 @@ export class Focus {
     if (on) {
       const cam = camera.getWorldPosition(this.v), fwd = camera.getWorldDirection(this.f);
       for (const p of pictures) {
-        const c = p.mesh.position, n = p.placed.normal;
+        const c = (p.centre ?? p.mesh).position, n = p.placed.normal;
         const tx = c.x - cam.x, ty = c.y - cam.y, tz = c.z - cam.z, d = Math.hypot(tx, ty, tz);
-        if (d > this.reach(p) || n[0] * -tx + n[2] * -tz <= 0) continue;           // too far, or its back to you
+        if (d > this.reach(p) || (!p.round && n[0] * -tx + n[2] * -tz <= 0)) continue;   // too far, or its back to you
         const ang = Math.acos(Math.min(1, (tx * fwd.x + ty * fwd.y + tz * fwd.z) / d));
         const allowed = Math.atan2(Math.max(p.w, p.h) * 0.5, d) + 0.17;
         if (ang > allowed) continue;
-        if (blocked(solids, cam.x, cam.z, c.x + n[0] * 0.05, c.z + n[2] * 0.05)) continue;
+        if (blocked(solids, cam.x, cam.z, c.x + (p.round ? 0 : n[0] * 0.05), c.z + (p.round ? 0 : n[2] * 0.05))) continue;
         const score = ang / allowed;
         if (score < bestScore) { bestScore = score; best = p; }
         if (p === this.pic) keep = score;
@@ -67,7 +67,7 @@ export class Focus {
     if (best) this.lit = best;
     let target = 0;
     if (best) {
-      const d = best.mesh.position.distanceTo(camera.getWorldPosition(this.v)), D0 = this.reach(best), D1 = D0 * 0.4;
+      const d = (best.centre ?? best.mesh).position.distanceTo(camera.getWorldPosition(this.v)), D0 = this.reach(best), D1 = D0 * 0.4;
       const t = Math.min(1, Math.max(0, (D0 - d) / (D0 - D1)));
       target = MAX * t * t * (3 - 2 * t);
     }
@@ -75,7 +75,7 @@ export class Focus {
     if (this.dark < 0.003 && !best) this.lit = null;
 
     // the first painting you come up to says how to see it full screen
-    if (!this.hintDone && best && this.dark > 0.12 && !this.hinted) this.hinted = best;
+    if (!this.hintDone && best && !best.round && this.dark > 0.12 && !this.hinted) this.hinted = best;
     const showing = !!this.hinted && best === this.hinted && this.dark > 0.08;
     if (this.hinted && !showing && this.hintEl.classList.contains('on')) { this.hintDone = true; this.hinted = null; }
     this.hintEl.classList.toggle('on', showing);
@@ -92,14 +92,14 @@ export class Focus {
     renderer.autoClear = false;
     renderer.render(this.vScene, this.vCam);
     const meshes = [p.mesh, p.label, p.dot].filter((m): m is THREE.Mesh => !!m);
-    for (const m of meshes) m.layers.enable(LIT);
+    for (const m of meshes) m.traverse((o) => o.layers.enable(LIT));
     const mask = camera.layers.mask, bg = scene.background;
     camera.layers.set(LIT);
     scene.background = null;                       // a colour background would clear the screen first
     renderer.render(scene, camera);
     scene.background = bg;
     camera.layers.mask = mask;
-    for (const m of meshes) m.layers.disable(LIT);
+    for (const m of meshes) m.traverse((o) => o.layers.disable(LIT));
     renderer.autoClear = true;
   }
 }

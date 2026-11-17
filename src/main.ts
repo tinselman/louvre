@@ -14,6 +14,7 @@ import { hang } from './hang';
 import type { Title, Item } from './hang';
 import type { Work } from './model';
 import { FloorMap } from './map';
+import { loadSculptures, sculptureSolids } from './sculpture';
 import { buildInterior, labelCanvas, doorSigns, rails, stairGeometry, stairFloor, type Pic, type Interior } from './build';
 import { FloorMirror } from './reflect';
 import { Player, EYE } from './player';
@@ -148,6 +149,10 @@ async function start() {
     interiors.set(f, it);
   }
   for (const s of stairs) scene.add(stairGeometry(s));
+  // the light the stair's stone, the rails and the sculptures are lit by (the walls and paintings light themselves)
+  const sky = new THREE.HemisphereLight(0xffffff, 0xc9c7c2, 2.9);
+  sky.layers.enableAll();
+  scene.add(sky);
   const pictures = FLOORS.flatMap((f) => interiors.get(f)!.pictures);
   const floorOfPic = new Map<Pic, number>(FLOORS.flatMap((f) => interiors.get(f)!.pictures.map((p) => [p, f] as [Pic, number])));
   const byId = new Map<string, Pic>(pictures.map((p) => [p.work.id, p]));
@@ -157,9 +162,10 @@ async function start() {
   player.world = arch.bounds;
   let cur = 1, inStair = false;
   const baseOf = (f: number) => arches.get(f)!.base;
+  const statues = sculptureSolids(data.sculptures ?? []);
   const setFloor = (f: number) => {
     cur = f;
-    player.solids = [...arches.get(f)!.solids, ...stairSolids];
+    player.solids = [...arches.get(f)!.solids, ...stairSolids, ...(statues.get(f) ?? [])];
     mirror.level = baseOf(f);
     for (const [g, it] of interiors) for (const m of it.floors) (m.material as THREE.ShaderMaterial).uniforms.uGloss.value = g === f ? 1 : 0;
   };
@@ -374,6 +380,17 @@ async function start() {
 
   const sights = new Map(FLOORS.map((f) => [f, [...arches.get(f)!.sight, ...stairSolids]]));
 
+  /* ---- the sculptures (when their scans are in) ----------------------------------------------------------------- */
+  const rounds: { pic: Pic; floor: number }[] = [];
+  loadSculptures(data.sculptures ?? [], baseOf, ({ pic, group, floor, sun, target }) => {
+    interiors.get(floor)?.group.add(group);
+    sun.position.copy(group.position).add(new THREE.Vector3(0, 12, 0)).addScaledVector(new THREE.Vector3(...pic.placed.normal), 4);
+    sun.target = target;
+    scene.add(sun);
+    if (pic.centre) scene.add(pic.centre);
+    rounds.push({ pic, floor });
+  });
+
   /* ---- the map (bottom right; M) ------------------------------------------------------------------------------ */
   const map = new FloorMap(B, (open) => { if (open && player.locked) { releasing = true; document.exitPointerLock(); } });
   if (params.has('map')) setTimeout(() => map.toggle(true), 200);
@@ -395,7 +412,7 @@ async function start() {
     camera.updateMatrixWorld();
     if ((picT -= dt) <= 0) { picT = 0.25; updatePictures(); }
     if (viewer.open) focus.clear();
-    else focus.update(dt, camera, pictures.filter((p) => p.mesh.visible), sights.get(cur)!, true);
+    else focus.update(dt, camera, [...pictures.filter((p) => p.mesh.visible), ...rounds.filter((r) => r.floor === cur).map((r) => r.pic)], sights.get(cur)!, true);
     mirror.render(renderer, scene, camera);
     renderer.render(scene, camera);
     const cross = player.locked && !touchOnly;
@@ -410,6 +427,6 @@ async function start() {
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
-  window.__g = { data, arch, arches, items, unplaced, pictures, player, camera, renderer, scene, focus, viewer, openWork, map,
+  window.__g = { data, arch, arches, rounds, items, unplaced, pictures, player, camera, renderer, scene, focus, viewer, openWork, map,
     floor: () => cur, setFloor, ground, roomAt: (x: number, z: number) => roomAt(arches.get(cur)!, x, z)?.id, pendingSharp: () => pendingSharp };
 }

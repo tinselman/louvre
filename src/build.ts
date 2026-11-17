@@ -302,6 +302,8 @@ export interface Pic {
   labelTex: THREE.CanvasTexture | null;
   /** its patch in the far mesh: first vertex, how many */
   farRange: [number, number];
+  /** a sculpture: seen from any side; its middle (for the focus) */
+  round?: boolean; centre?: THREE.Object3D;
 }
 export interface Interior {
   group: THREE.Group; pictures: Pic[]; far: THREE.Mesh; floors: THREE.Mesh[];
@@ -511,7 +513,6 @@ export function stairGeometry(s: Stair) {
 export function rails(list: { x0: number; z0: number; x1: number; z1: number; h: number }[]) {
   const group = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: WHITE_FRAME, roughness: 0.6 });
-  group.add(new THREE.HemisphereLight(0xffffff, 0xc9c7c2, 2.9));
   for (const r of list) {
     const L = Math.hypot(r.x1 - r.x0, r.z1 - r.z0), n = Math.max(2, Math.round(L / 1.5) + 1);
     const post = new THREE.CylinderGeometry(0.022, 0.026, r.h, 14).translate(0, r.h / 2, 0);
