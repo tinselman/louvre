@@ -12,19 +12,27 @@ imgs = json.load(open('data/images.json')) if os.path.exists('data/images.json')
 tried = set(json.load(open('source/images-failed.json'))) if os.path.exists('source/images-failed.json') else set()
 todo = sorted([w for w in works if w['id'] not in imgs], key=lambda w: w['id'] in tried)[:lim]
 failed = set(tried)
+PACE = float(os.environ.get('PACE', 6.0))   # seconds between pictures (Wikimedia turned this Mac away at one a second, 2026-11-16)
+calm = 0.0           # after a "too many requests", how long to wait (it grows while they keep coming)
 def get(url, tries=4):
-    for k in range(tries):
+    global calm
+    k = 0
+    while k < tries:
         try:
-            with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA}), timeout=25) as r: return r.read()
+            with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': UA}), timeout=25) as r:
+                calm = max(0.0, calm * 0.5 - 30); return r.read()
         except urllib.error.HTTPError as e:
             print('  http', e.code, url[:90], flush=True)
             if e.code in (429, 503):
                 if '/thumb/' not in url and 'api.php' not in url: return None      # an original: leave it to the page
-                time.sleep(int(e.headers.get('Retry-After') or 0) or 6 * (k + 1)); continue
+                # wait longer than asked, and longer each time, then the SAME picture again (a "wait" isn't a failure)
+                calm = min(1800.0, max(calm * 1.6, (int(e.headers.get('Retry-After') or 0) or 60) * 1.5))
+                print(f'  waiting {calm:.0f} s', flush=True); time.sleep(calm); continue
             if e.code == 404: return None
-            raise
+            k += 1                                   # (another error: a few tries, then let it go)
         except Exception as e:
-            print('  error', type(e).__name__, url[:90], flush=True); time.sleep(3 * (k + 1))
+            k += 1
+            print('  error', type(e).__name__, url[:90], flush=True); time.sleep(3 * k)
     return None
 def info(files, width):
     q = urllib.parse.urlencode({'action': 'query', 'format': 'json', 'prop': 'imageinfo', 'iiprop': 'url|size',
@@ -81,6 +89,6 @@ for i in range(0, len(todo), 40):
         if n % 10 == 0:
             json.dump(imgs, open('data/images.json', 'w'), indent=0)
             print(n, 'pictures', flush=True)
-        time.sleep(1.2)          # one at a time, gently
+        time.sleep(PACE)         # one at a time, gently
     json.dump(imgs, open('data/images.json', 'w'), indent=0)
 print('done', n, flush=True)

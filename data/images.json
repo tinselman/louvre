@@ -8071,5 +8071,135 @@
 1000,
 1328
 ]
+},
+"010060831": {
+"px": [
+753,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/d/d2/Peter_Paul_Rubens_044.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#58442d",
+"file": "Peter Paul Rubens 044.jpg",
+"size": [
+1000,
+1359
+]
+},
+"010060832": {
+"px": [
+770,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ec/Peter_Paul_Rubens_055.jpg/1920px-Peter_Paul_Rubens_055.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#4d341f",
+"file": "Peter Paul Rubens 055.jpg",
+"size": [
+2024,
+2691
+]
+},
+"010060834": {
+"px": [
+768,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/4/4c/Peter_Paul_Rubens_047.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#5d4025",
+"file": "Peter Paul Rubens 047.jpg",
+"size": [
+1000,
+1333
+]
+},
+"010060833": {
+"px": [
+765,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/41/Peter_Paul_Rubens_041.jpg/1920px-Peter_Paul_Rubens_041.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#4a3920",
+"file": "Peter Paul Rubens 041.jpg",
+"size": [
+2024,
+2710
+]
+},
+"010060836": {
+"px": [
+764,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/d/da/Peter_Paul_Rubens_037.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#7f6858",
+"file": "Peter Paul Rubens 037.jpg",
+"size": [
+1045,
+1400
+]
+},
+"010060838": {
+"px": [
+960,
+515
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/0/08/Peter_Paul_Rubens_042.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#60452a",
+"file": "Peter Paul Rubens 042.jpg",
+"size": [
+1600,
+858
+]
+},
+"010066009": {
+"px": [
+960,
+523
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/56/Rubens_Pieter_Paul_Coronation_Of_Marie_De_Medici_To_Strengthen_Authority_Regent_louvre.jpg/1920px-Rubens_Pieter_Paul_Coronation_Of_Marie_De_Medici_To_Strengthen_Authority_Regent_louvre.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#563c23",
+"file": "Rubens Pieter Paul Coronation Of Marie De Medici To Strengthen Authority Regent louvre.jpg",
+"size": [
+6487,
+3533
+]
+},
+"010060840": {
+"px": [
+769,
+1024
+],
+"l": "https://upload.wikimedia.org/wikipedia/commons/0/0f/Peter_Paul_Rubens_051.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+"c": "#57341f",
+"file": "Peter Paul Rubens 051.jpg",
+"size": [
+1000,
+1332
+]
+},
+"010060841": {
+"px": [
+779,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/57/0_La_Naissance_du_dauphin_%C3%A0_Fontainebleau_-_P.P._Rubens_-_Louvre_2.JPG/1920px-0_La_Naissance_du_dauphin_%C3%A0_Fontainebleau_-_P.P._Rubens_-_Louvre_2.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#8b7869",
+"file": "0 La Naissance du dauphin \u00e0 Fontainebleau - P.P. Rubens - Louvre 2.JPG",
+"size": [
+2316,
+3045
+]
+},
+"010060819": {
+"px": [
+800,
+1024
+],
+"l": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/be/0_Entrevue_du_roi_et_de_Marie_de_M%C3%A9dicis_%C3%A0_Lyon_-_P.P._Rubens_-_Louvre_2.JPG/1920px-0_Entrevue_du_roi_et_de_Marie_de_M%C3%A9dicis_%C3%A0_Lyon_-_P.P._Rubens_-_Louvre_2.JPG?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+"c": "#706a5f",
+"file": "0 Entrevue du roi et de Marie de M\u00e9dicis \u00e0 Lyon - P.P. Rubens - Louvre 2.JPG",
+"size": [
+2336,
+2990
+]
 }
 }
