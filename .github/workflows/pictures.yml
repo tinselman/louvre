@@ -1,0 +1,44 @@
+# A one-off job (Robyn, 2026-11-17: "Yes, use GitHub"): Wikimedia had turned the Mac that builds this site away
+# for asking too fast, so the paintings' pictures are fetched here instead, on GitHub's own computers, a hundred at
+# a time, each hundred saved to the studio branch as it's done. It runs when this file is pushed (or by hand from the
+# Actions tab); once the pictures are in, the file is taken out again.
+name: Fetch the paintings' pictures
+on:
+  push:
+    branches: [studio]
+    paths: ['.github/workflows/pictures.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: { group: pictures, cancel-in-progress: false }
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: studio }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install pillow==11.0.0
+      - name: Fetch, a hundred at a time, saving each hundred
+        env: { PACE: '2.5' }
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for round in $(seq 1 25); do
+            before=$(python3 -c "import json; print(len(json.load(open('data/images.json'))))")
+            timeout 1500 python3 tools/images.py 100 || true
+            after=$(python3 -c "import json; print(len(json.load(open('data/images.json'))))")
+            echo "round $round: $before -> $after pictures"
+            git add public/art data/images.json
+            git add source/images-failed.json 2>/dev/null || true
+            if ! git diff --cached --quiet; then
+              git commit -q -m "Pictures from Wikimedia Commons, fetched on GitHub: $after in all"
+              git pull -q --rebase origin studio && git push -q origin HEAD:studio
+            fi
+            left=$(python3 -c "import json; i=json.load(open('data/images.json')); w=json.load(open('data/works.json')); print(sum(1 for e in w if e['id'] not in i))")
+            echo "left: $left"
+            [ "$after" = "$before" ] && [ "$round" -gt 2 ] && break
+            [ "$left" -le 0 ] && break
+          done
