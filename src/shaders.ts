@@ -230,6 +230,83 @@ export function floorMaterial(refl: THREE.Texture, texMat: THREE.Matrix4, segs: 
   });
 }
 
+/* The stair's stone (Robyn, 2026-11-17: "stairs should have the same glossy floors and rounded corner on edge of
+   stairs"): the floors' polished concrete on its treads, risers and the rounded nose of every step: the same mottle,
+   aggregate and soft mirror. The mirror is the floors' one, made level with where you stand when you're on the stair;
+   a step higher or lower looks along its own reflected ray (a point `REACH` out) in that same picture, and where that
+   point isn't in it (below the mirror, off its edge) sees the white hall instead. Shade: the inside corner at the
+   back of each tread, the risers lit less than the treads, and along the walls (`segs`). `st`: the stair's plan
+   (xL, xE, run, the z between its flights) and `n`, steps in each flight. */
+export function stairMaterial(refl: THREE.Texture, texMat: THREE.Matrix4, segs: THREE.Vector4[], st: THREE.Vector4, n: number) {
+  const s = segs.slice(0, MAXSEG);
+  while (s.length < MAXSEG) s.push(new THREE.Vector4(1e5, 1e5, 1e5, 1e5));
+  return new THREE.ShaderMaterial({
+    uniforms: { uRefl: { value: refl }, uTexMat: { value: texMat }, uLevel: { value: 0 }, uAmb: { value: FLOOR_AMB }, uSeg: { value: s }, uNSeg: { value: Math.min(segs.length, MAXSEG) }, uSt: { value: st }, uN: { value: n } },
+    vertexShader: VERT,
+    fragmentShader: /* glsl */ `
+      #define MAXSEG ${MAXSEG}
+      #define REACH 2.5
+      uniform sampler2D uRefl; uniform mat4 uTexMat;
+      uniform float uLevel; uniform float uAmb; uniform float uN;
+      uniform vec4 uSeg[MAXSEG]; uniform int uNSeg; uniform vec4 uSt;
+      varying vec3 vW; varying vec3 vN; varying vec2 vUv;
+      ${NOISE}
+      const vec2 DISC[8] = vec2[8](vec2(-0.613, 0.617), vec2(0.170, -0.040), vec2(-0.299, -0.792),
+        vec2(0.645, 0.493), vec2(-0.651, -0.072), vec2(0.421, -0.581), vec2(-0.033, 0.977), vec2(0.928, -0.156));
+      float segDist(vec2 p, vec4 s) {
+        vec2 a = s.xy, b = s.zw, ab = b - a;
+        float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+        return length(p - a - ab * t);
+      }
+      float mottle(vec2 p) { return 0.55 * fbm(p * 0.45) + 0.30 * fbm(p * 2.6 + 5.0) + 0.15 * vnoise(p * 23.0); }
+      float speck(vec2 p) { return step(0.93, vnoise(p * 140.0)); }
+      void main() {
+        vec3 n = normalize(vN);
+        // the concrete laid on each face from the side it faces: treads from above (as the floors), risers from the front
+        vec3 w = pow(abs(n), vec3(4.0)); w /= (w.x + w.y + w.z);
+        float m = 0.0, sp = 0.0;
+        if (w.y > 0.01) { m += w.y * mottle(vW.xz); sp += w.y * speck(vW.xz); }
+        if (w.x > 0.01) { vec2 q = vW.zy + 31.0; m += w.x * mottle(q); sp += w.x * speck(q); }
+        if (w.z > 0.01) { vec2 q = vW.xy + 57.0; m += w.z * mottle(q); sp += w.z * speck(q); }
+        vec3 alb = mix(vec3(0.30, 0.298, 0.292), vec3(0.47, 0.465, 0.455), m);
+        alb = mix(alb, alb * 1.35, sp * 0.5);
+        float ao = 1.0;
+        for (int k = 0; k < MAXSEG; k++) {
+          if (k >= uNSeg) break;
+          ao *= 1.0 - 0.42 * exp(-segDist(vW.xz, uSeg[k]) / 0.28);
+        }
+        // the inside corner at the back of a tread, where the next riser goes up (and in front of each flight's first)
+        if (n.y > 0.9) {
+          float t = vW.z < uSt.w ? (uSt.y - vW.x) / uSt.z : (vW.x - uSt.x) / uSt.z;   // steps up its flight
+          if (t > -1.0 && t < uN - 1.0) ao *= 1.0 - 0.32 * exp(-(1.0 - fract(t)) * uSt.z / 0.05);
+        }
+        float lit = 0.80 + 0.20 * clamp(n.y, 0.0, 1.0);
+        vec3 base = alb * (vec3(uAmb) * ao * lit);
+        vec3 V = normalize(cameraPosition - vW);
+        vec3 R = reflect(-V, n);
+        vec3 P = vW + R * REACH;
+        vec4 pr = uTexMat * vec4(P, 1.0);
+        vec2 ruv = pr.xy / pr.w;
+        vec2 wob = (vec2(fbm(vW.xz * 7.0 + 3.1), fbm(vW.xz * 7.0 - 7.3)) - 0.5) * 0.010;
+        float dist = length(cameraPosition - vW);
+        float blur = 0.0035 + 0.006 * smoothstep(1.0, 8.0, dist);
+        vec3 rc = vec3(0.0);
+        for (int k = 0; k < 8; k++) rc += texture2D(uRefl, ruv + wob + DISC[k] * blur).rgb;
+        rc /= 8.0;
+        // the white hall, where the mirror has nothing to show
+        vec3 hall = mix(vec3(0.30, 0.298, 0.292) * uAmb, vec3(0.72, 0.715, 0.70), smoothstep(-0.25, 0.25, R.y));
+        vec2 e = min(ruv, 1.0 - ruv);
+        float ok = smoothstep(uLevel + 0.02, uLevel + 0.35, P.y) * smoothstep(0.0, 0.04, min(e.x, e.y)) * step(0.0, pr.w);
+        rc = mix(hall, rc, ok);
+        float F = 0.045 + 0.955 * pow(1.0 - max(dot(V, n), 0.0), 5.0);
+        float gloss = 0.80 * mix(1.0, 0.75, m);
+        vec3 col = base * (1.0 - F * gloss) + rc * F * gloss;
+        gl_FragColor = vec4(col, 1.0);
+        ${OUT}
+      }`,
+  });
+}
+
 /* A painting in its frame. aSide 0 = the painting's face (its photograph), 1 = the canvas's edge (its outermost
    paint), 2 = the frame (a flat colour, aCol). Lit evenly from above: the faces turned up a touch brighter,
    those turned down darker; the photograph itself at full strength. */

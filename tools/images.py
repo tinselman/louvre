@@ -4,7 +4,7 @@ the full view ('l'). Writes data/images.json {id: {px:[w,h] of m, l: url, c: '#r
 Wikimedia asks bulk users for one request at a time and a clear User-Agent."""
 import json, sys, time, os, subprocess, urllib.request, urllib.parse
 from PIL import Image
-UA = "LouvreWalkthrough/0.1 (personal non-commercial project; one request at a time)"
+UA = "LouvreWalkthrough/0.1 (https://tinselman.github.io/louvre/)"   # contact = the site (his OK, 2026-11-17); never his email
 works = json.load(open('data/works.json'))
 lim = int(sys.argv[1]) if len(sys.argv) > 1 else 10**9
 imgs = json.load(open('data/images.json')) if os.path.exists('data/images.json') else {}

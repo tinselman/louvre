@@ -148,7 +148,8 @@ async function start() {
     scene.add(it.group, it.stair);
     interiors.set(f, it);
   }
-  for (const s of stairs) scene.add(stairGeometry(s));
+  const stairDoors = B.doors.filter((d) => B.rooms.some((r) => r.stair && (r.id === d.a || r.id === d.b)));
+  const stone = stairs.map((s) => { const g = stairGeometry(s, mirror.target.texture, mirror.texMat, stairDoors); scene.add(g); return g.userData.stone as THREE.ShaderMaterial; });
   // the light the stair's stone, the rails and the sculptures are lit by (the walls and paintings light themselves)
   const sky = new THREE.HemisphereLight(0xffffff, 0xc9c7c2, 2.9);
   sky.layers.enableAll();
@@ -166,8 +167,16 @@ async function start() {
   const setFloor = (f: number) => {
     cur = f;
     player.solids = [...arches.get(f)!.solids, ...stairSolids, ...(statues.get(f) ?? [])];
-    mirror.level = baseOf(f);
-    for (const [g, it] of interiors) for (const m of it.floors) (m.material as THREE.ShaderMaterial).uniforms.uGloss.value = g === f ? 1 : 0;
+    setLevel(baseOf(f));
+  };
+  /** the mirror's height: your floor's, or on the stair where your feet are (so the steps near you shine true);
+      a room's floor keeps its gloss only while the mirror is at its own height */
+  let level = NaN;
+  const setLevel = (L: number) => {
+    if (Math.abs(L - level) < 1e-3) return;
+    level = L; mirror.level = L;
+    for (const m of stone) m.uniforms.uLevel.value = L;
+    for (const [g, it] of interiors) { const v = Math.max(0, 1 - Math.abs(L - baseOf(g)) / 0.5); for (const m of it.floors) (m.material as THREE.ShaderMaterial).uniforms.uGloss.value = v; }
   };
   /** the floor's height where you stand, and whether that's on the stair */
   const ground = (x: number, z: number) => {
@@ -202,6 +211,7 @@ async function start() {
     }
     const want = g.y + EYE;
     player.pos.y += (want - player.pos.y) * (dt > 0 ? Math.min(1, dt * 14) : 1);
+    setLevel(inStair ? player.pos.y - EYE : baseOf(cur));
     for (const [f, it] of interiors) it.group.visible = f === cur || inStair;
   };
   settle(0);

@@ -129,3 +129,28 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
   4.29 long, 2.58 wide, on a 0.36 m base, grey Lartos marble), 5.64 m in all. The scan's colour map gives the surface
   detail; its hue (the Basel cast's brown paint) is turned to Parian marble (#ece7dd). Credit on her label and on the
   wall title. Frame times 2.3 ms beside her; WebKit renders her.
+
+## The floor-2 pictures (2026-11-17)
+- Wikimedia kept answering this Mac 429 for hours, so at his "Yes, use GitHub" a one-off job,
+  `.github/workflows/pictures.yml`, was to fetch them on GitHub's computers. The access token on this Mac can't push
+  workflow files (no `workflow` scope), so he committed it himself on github.com (6d6537b). Run 44040942736 ran
+  75 min and got **nothing**: Wikimedia turned GitHub's machines away (429) on the very first picture, every try.
+  Wikimedia is stricter with shared cloud addresses than with a home connection. Don't try that again.
+- Back on this Mac, each picture's first request was still refused (429) while the same picture asked for once by
+  hand came through. Wikimedia's robot policy (wikitech Robot_policy + the Foundation's User-Agent policy) wants a
+  bulk script to name a contact (email or website) in its User-Agent, or it may be throttled. At his "Yes, name the
+  site" the fetcher now sends `LouvreWalkthrough/0.1 (https://tinselman.github.io/louvre/)` — the site, never his
+  email. Not getting round their checks with another tool was the point. `PACE=3 python3 -u tools/images.py`.
+- The job file stays harmless (it only runs if the file itself changes, or by hand from the Actions tab). Deleting it
+  needs github.com too (same token limit): github.com/tinselman/louvre/delete/studio/.github/workflows/pictures.yml.
+
+## The stair's stone (2026-11-17, his "stairs should have the same glossy floors and rounded corner on edge of stairs")
+- Treads, risers, the landing, the foot and the head are the floors' polished concrete now (`stairMaterial` in
+  shaders.ts: the same mottle, aggregate and mirror, laid on each face from the side it faces; no saw-cut joints).
+- Every step's front edge is a quarter round, `NOSE` = 25 mm, 6 facets with smooth normals (build.ts `stairGeometry`).
+- Shade: the inside corner at the back of each tread, the risers lit at 80 %, along the walls (doorways left open).
+- The gloss: the floors' one mirror, put level with your feet while you're on the stair (main.ts `setLevel`); a step
+  above or below it looks 2.5 m along its reflected ray in that picture, and where that point isn't in it, the white
+  hall. Room floors keep their gloss only while the mirror is within 0.5 m of their height. The stair is on layer 1,
+  as the floors (a glossy surface can't be drawn into its own mirror).
+- check.mjs PASS, stairwalk both ways, frame times 2.7–5.9 ms, WebKit renders it.
