@@ -12,7 +12,7 @@ import { loadData } from './model';
 import { buildArch, facePoint, roomAt, type Arch, type Rect } from './arch';
 import { hang } from './hang';
 import type { Title, Item } from './hang';
-import type { Work } from './model';
+import type { Work, Room } from './model';
 import { FloorMap } from './map';
 import { loadSculptures, sculptureSolids } from './sculpture';
 import { buildInterior, labelCanvas, doorSigns, rails, stairGeometry, stairFloor, type Pic, type Interior } from './build';
@@ -403,7 +403,37 @@ async function start() {
   });
 
   /* ---- the map (bottom right; M) ------------------------------------------------------------------------------ */
-  const map = new FloorMap(B, (open) => { if (open && player.locked) { releasing = true; document.exitPointerLock(); } });
+  let lockedAtMap = false;
+  /** a room clicked on the map: you're put in it where you clicked (kept off its walls), looking the longest way
+      across it; a stair's room puts you at its foot (the lower floor) or its head (the upper), looking along it */
+  const goTo = (r: Room, x: number, z: number) => {
+    let yaw: number;
+    const cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2;
+    const s = r.stair ? stairs.find((t) => cx > t.x0 && cx < t.x1 && cz > t.z0 && cz < t.z1) : undefined;
+    if (s) {
+      x = (s.xE + s.x1) / 2;
+      z = r.floor === (s.lo ?? 1) ? (s.z0 + s.aZ) / 2 : (s.bZ + s.z1) / 2;
+      yaw = Math.PI / 2;                     // west: up the first flight, or down the last
+    } else {
+      const m = 0.8, fit = (v: number, a: number, b: number) => (b - a < 2 * m ? (a + b) / 2 : Math.max(a + m, Math.min(b - m, v)));
+      x = fit(x, r.x0, r.x1); z = fit(z, r.z0, r.z1);
+      const ways: [number, number][] = [[z - r.z0, 0], [r.z1 - z, Math.PI], [x - r.x0, Math.PI / 2], [r.x1 - x, -Math.PI / 2]];
+      yaw = ways.reduce((a, b) => (b[0] > a[0] ? b : a))[1];
+    }
+    setFloor(r.floor);
+    player.pos.set(x, EYE, z);
+    player.yaw = yaw; player.pitch = 0.02;
+    player.goal = null; player.glide.set(0, 0); player.spin = 0; player.moved = true;
+    player.collide();
+    settle(0);
+    updatePictures();
+    if (lockedAtMap && !touchOnly) canvas.requestPointerLock();
+  };
+  const map = new FloorMap(B, (open) => {
+    if (!open) return;
+    lockedAtMap = player.locked;
+    if (player.locked) { releasing = true; document.exitPointerLock(); }
+  }, goTo);
   if (params.has('map')) setTimeout(() => map.toggle(true), 200);
 
   /* ---- the loop ------------------------------------------------------------------------------------------- */

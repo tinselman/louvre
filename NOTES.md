@@ -222,3 +222,20 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
 - `?at=x,z,yaw,pitch,0` now works (floor 0 was read as "no floor"). `node tools/stairwalk.mjs daru` walks 703 → down →
   the foot hall → Mars → Diane → her, and back up. fps.mjs has five ground-floor/stair spots (1.6–4.4 ms).
 - check.mjs PASS; stairwalk (Henri II) unchanged; WebKit renders her room and the stair, no errors.
+
+## Published 2026-11-18 (his "Yes, publish") — the ground floor and the Venus de Milo
+- Studio 1d102fb → main ef2d113 (version mwm7v2b8). Dropped index-DXn9K2lp.js; kept index-ChV7oqjx.js (the build
+  before) for stale pages — drop it next publish. The photo-built Venus test model is not in the build (only
+  models/venus.glb from the Scan the World STL, and victoire.glb).
+
+## The map: click a room to go there (2026-11-18, his "users should be able to click anywhere on map and be placed into that room")
+- src/map.ts: a click on any room of the floor shown (of rooms one inside another, the smaller) calls `goTo` in
+  main.ts and closes the map. The room under the pointer is tinted red and named below: "Go to 345 · Salle de la
+  Vénus de Milo".
+- Where you land: where you clicked, kept 0.8 m off its walls (a room under 1.6 m across: its middle), looking the
+  longest way across it. A stair's room: its foot on the lower floor's tab, its head on the upper's, looking west
+  along the flight. If you'd held the mouse (pointer lock) when the map opened with M, it's held again.
+- The plan draws the whole Louvre at ~1.6 px a metre (950 px wide), so the small cabinets are a few pixels — the
+  tint shows which one you're on.
+- `node tools/mapclick.mjs [out-dir]`: clicks every room's middle on its floor's tab (162 of 162 right), the four
+  stair ends, a corner; shots map-hover.png / map-landed.png. WebKit: 345, 711, s2, dz1 right, no errors. check.mjs PASS.

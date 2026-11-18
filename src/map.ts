@@ -2,12 +2,15 @@
    museum. small X in upper right corner closes the map"). A round button in the bottom-right corner (or the M key)
    opens the plan of the floor you're on: every room, its number, the doorways, the stair, and you — a red dot and the
    way you're facing. Two tabs show the other floor; the X in the panel's top-right corner (or M, or Esc) closes it.
-   Drawn on a canvas, north up (the frame's x east, z south toward the Seine), redrawn only while it's open. */
-import type { Building } from './model';
+   Drawn on a canvas, north up (the frame's x east, z south toward the Seine), redrawn only while it's open.
+   A click on any room of the floor shown puts you in it (Robyn, 2026-11-18: "users should be able to click anywhere on
+   map and be placed into that room"); the room under the pointer lights up and is named below. */
+import type { Building, Room } from './model';
 
 const FLOOR_NAME: Record<number, string> = { 0: 'Ground floor · the Venus de Milo', 1: 'First floor · Denon', 2: 'Second floor · Richelieu and Sully' };
 const ON: Record<number, string> = { 0: 'ground', 1: 'first', 2: 'second' };
 const RED = '#d8231b';
+const label = (r: Room) => (/^\d+$/.test(r.id) ? `${r.id} · ${r.name}` : r.name);
 
 export class FloorMap {
   open = false;
@@ -20,8 +23,11 @@ export class FloorMap {
   private tabs: HTMLButtonElement[] = [];
   private me = { x: 0, z: 0, yaw: 0, floor: 1 };
   private last = '';
+  private frame = { X0: 0, Z0: 0, k: 1 };   // metres → the canvas's CSS pixels, as last drawn
+  private hover: Room | null = null;
 
-  constructor(private B: Building, private onToggle: (open: boolean) => void) {
+  constructor(private B: Building, private onToggle: (open: boolean) => void,
+              private onGo: (room: Room, x: number, z: number) => void = () => {}) {
     this.btn = document.createElement('button');
     this.btn.id = 'map-btn';
     this.btn.setAttribute('aria-label', 'Map');
@@ -49,6 +55,33 @@ export class FloorMap {
     this.cv = document.createElement('canvas');
     this.here = document.createElement('div'); this.here.className = 'map-here';
     this.panel.append(head, this.cv, this.here);
+    // the room under a point of the plan (on the floor shown; of rooms one inside another, the smaller)
+    const at = (e: MouseEvent) => {
+      const b = this.cv.getBoundingClientRect(), { X0, Z0, k } = this.frame;
+      const x = X0 + (e.clientX - b.left) / k, z = Z0 + (e.clientY - b.top) / k;
+      let room: Room | null = null;
+      const area = (r: Room) => (r.x1 - r.x0) * (r.z1 - r.z0);
+      for (const r of this.B.rooms) {
+        if (r.floor === this.shown && x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1 && (!room || area(r) < area(room))) room = r;
+      }
+      return { room, x, z };
+    };
+    const point = (r: Room | null) => {
+      if (r === this.hover) return;
+      this.hover = r;
+      this.cv.style.cursor = r ? 'pointer' : '';
+      this.draw(true);
+    };
+    this.cv.addEventListener('pointermove', (e) => point(at(e).room));
+    this.cv.addEventListener('pointerleave', () => point(null));
+    this.cv.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const h = at(e);
+      if (!h.room) return;
+      this.hover = null; this.cv.style.cursor = '';
+      this.onGo(h.room, h.x, h.z);
+      this.toggle(false);
+    });
     for (const ev of ['mousedown', 'pointerdown', 'touchstart', 'wheel'] as const) this.panel.addEventListener(ev, (e) => e.stopPropagation(), { passive: true });
     document.body.append(this.btn, this.panel);
     addEventListener('resize', () => { if (this.open) this.draw(true); });
@@ -58,6 +91,7 @@ export class FloorMap {
   toggle(want = !this.open) {
     this.open = want;
     this.chosen = null;
+    this.hover = null;
     this.panel.classList.toggle('on', want);
     this.btn.classList.toggle('on', want);
     this.onToggle(want);
@@ -90,6 +124,7 @@ export class FloorMap {
     const g = this.cv.getContext('2d')!;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, cssW, cssH);
+    this.frame = { X0, Z0, k };
     const P = (x: number, z: number): [number, number] => [(x - X0) * k, (z - Z0) * k];
     // the other floor, faintly, for bearings
     g.fillStyle = '#f1f0ec';
@@ -99,6 +134,7 @@ export class FloorMap {
       const [a, b] = P(r.x0, r.z0), w = (r.x1 - r.x0) * k, h = (r.z1 - r.z0) * k;
       g.fillStyle = r.stair ? '#e7e4dc' : r.hang ? '#ffffff' : '#f7f6f2';
       g.fillRect(a, b, w, h);
+      if (r === this.hover) { g.fillStyle = 'rgba(216,35,27,0.10)'; g.fillRect(a, b, w, h); }
       g.strokeStyle = '#8f8c85'; g.lineWidth = 1; g.strokeRect(a + 0.5, b + 0.5, w - 1, h - 1);
     }
     // doorways: a gap in each wall
@@ -153,8 +189,9 @@ export class FloorMap {
       g.fillStyle = RED; g.strokeStyle = '#ffffff'; g.lineWidth = 2;
       g.beginPath(); g.arc(a, b, 5, 0, Math.PI * 2); g.fill(); g.stroke();
     }
-    const where = room ? (/^\d+$/.test(room.id) ? `${room.id} · ${room.name}` : room.name) : '';
-    this.here.textContent = (this.me.floor === f ? `${FLOOR_NAME[f] ?? ''}${where ? ' — you are in ' + where : ''}`
+    const where = room ? label(room) : '';
+    this.here.textContent = this.hover && this.hover.floor === f ? `Go to ${label(this.hover)}`
+      : (this.me.floor === f ? `${FLOOR_NAME[f] ?? ''}${where ? ' — you are in ' + where : ''}`
       : `${FLOOR_NAME[f] ?? ''} — you are on the ${ON[this.me.floor] ?? ''} floor`);
   }
 
