@@ -18,7 +18,7 @@
   "scanHeight": 3.28,
   "w": 2.6,
   "depth": 4.6,
-  "model": "models/victoire.glb",
+  "model": "models/victoire-1024.glb",
   "colour": "#ece7dd",
   "ship": {
    "h": 2.0,
