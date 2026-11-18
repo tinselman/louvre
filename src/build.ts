@@ -56,7 +56,8 @@ function skyOf(r: Room): SkyRefs {
   // the stair's two parts are lit as one tall room under the second floor's skylight, from the first floor up
   if (r.stair && r.wallTop) {
     const s = skyRect({ ...r, ceiling: 'cove', spring: 6.5, top: 8 });
-    return { rect: s ? new THREE.Vector4(s.x0, s.z0, s.x1, s.z1) : new THREE.Vector4(0, 0, 0, 0), top: r.wallTop, base: 0 };
+    const b = r.wallBase ?? 0;
+    return { rect: s ? new THREE.Vector4(s.x0, s.z0, s.x1, s.z1) : new THREE.Vector4(0, 0, 0, 0), top: r.wallTop - b, base: b };
   }
   const none = { rect: new THREE.Vector4(0, 0, 0, 0), top: r.top, base: r.y };
   if (!r.sky) return none;
@@ -339,7 +340,7 @@ export function buildInterior(A: Arch, items: Item[], titles: Title[], textureOf
         .map((it) => ({ c: v3(it.pos), s: new THREE.Vector3(it.ow / 2, it.oh / 2, it.depth) }));
       const m = wallMaterial({
         normal: new THREE.Vector3(f.n[0], 0, f.n[1]), right: new THREE.Vector3(f.right[0], 0, f.right[1]), axisX: f.axis === 'x',
-        u0: f.u0, u1: f.u1, cornerA: f.cornerA, cornerB: f.cornerB, spring: f.room.wallTop ?? (f.lunette ? f.room.top : f.h), boxes,
+        u0: f.u0, u1: f.u1, cornerA: f.cornerA, cornerB: f.cornerB, spring: f.room.wallTop != null ? f.room.wallTop - (f.room.wallBase ?? 0) : (f.lunette ? f.room.top : f.h), boxes,
       }, wallWhite, skies.get(f.room.id)!);
       mats.push(m);
       add(g.geometry(), m, 0, f.room.stair ? stair : group).userData.face = f;
@@ -465,9 +466,9 @@ export function buildInterior(A: Arch, items: Item[], titles: Title[], textureOf
 export const STEP = 0.16;
 export function stairFloor(s: Stair, x: number, z: number): number | null {
   if (x < s.x0 || x > s.x1 || z < s.z0 || z > s.z1) return null;
-  const half = s.rise / 2, t = Math.max(0, Math.min(1, (s.xE - x) / (s.xE - s.xL)));
-  if (x <= s.xL) return half;
-  return z < (s.aZ + s.bZ) / 2 ? half * t : s.rise - half * t;
+  const half = s.rise / 2, t = Math.max(0, Math.min(1, (s.xE - x) / (s.xE - s.xL))), y0 = s.y0 ?? 0;
+  if (x <= s.xL) return y0 + half;
+  return y0 + (z < (s.aZ + s.bZ) / 2 ? half * t : s.rise - half * t);
 }
 export const NOSE = 0.025;                         // the rounded front edge of each step (m)
 export function stairGeometry(s: Stair, refl: THREE.Texture, texMat: THREE.Matrix4, doors: Door[]) {
@@ -488,7 +489,7 @@ export function stairGeometry(s: Stair, refl: THREE.Texture, texMat: THREE.Matri
     }
     stone.quad([[X - dir * r, y1, z0], [X - dir * run, y1, z0], [X - dir * run, y1, z1], [X - dir * r, y1, z1]], [0, 1, 0]);
   };
-  // band A: from the first floor at xE up (west) to the landing; band B: from the landing up (east) to the second
+  // band A: from the lower floor at xE up (west) to the landing; band B: from the landing up (east) to the upper
   for (let k = 0; k < n; k++) {
     step(s.xE - k * run, k * STEP, (k + 1) * STEP, 1, s.z0, s.aZ);
     step(s.xL + k * run, half + k * STEP, half + (k + 1) * STEP, -1, s.bZ, s.z1);
@@ -524,6 +525,7 @@ export function stairGeometry(s: Stair, refl: THREE.Texture, texMat: THREE.Matri
   tread.layers.set(1);                               // as the floors: never drawn into its own reflection
   const plain = new THREE.MeshStandardMaterial({ color: WHITE_WALL, roughness: 0.95 });
   group.add(tread, new THREE.Mesh(wall.geometry(), plain));
+  group.position.y = s.y0 ?? 0;                      // (drawn from its lower floor's height)
   group.userData.stone = mat;
   return group;
 }

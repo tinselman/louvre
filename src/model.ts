@@ -17,16 +17,16 @@ export interface Room {
   axis: 'x' | 'z';                   // a vault runs this way
   hang: boolean;
   floor: number;                     // 1 or 2
-  y: number;                         // the height of its floor (0, or the second floor's)
+  y: number;                         // the height of its floor (0; the second floor's above, the ground floor's below)
   /** one floor's part of the stair between them: no floor of its own (the flights are), walls only */
   stair?: boolean;
-  /** the stair's walls, both floors' parts, shaded as one wall this high (from the first floor) */
-  wallTop?: number;
+  /** the stair's walls, both floors' parts, shaded as one wall from wallBase (its lower floor's height) up to wallTop */
+  wallTop?: number; wallBase?: number;
 }
 /** the stair between the floors: two flights side by side in one room (a part on each floor). Band A (z0…aZ) rises
-    from the first floor at its east end (xE) west to a landing (x0…xL); band B (bZ…z1) rises from the landing back
-    east to the second floor; between them a wall from xL to the east wall. */
-export interface Stair { id: string; x0: number; z0: number; x1: number; z1: number; rise: number; aZ: number; bZ: number; xL: number; xE: number }
+    from the lower floor (lo, its floor at y0) at its east end (xE) west to a landing (x0…xL); band B (bZ…z1) rises
+    from the landing back east to the upper floor (hi); between them a wall from xL to the east wall. */
+export interface Stair { id: string; x0: number; z0: number; x1: number; z1: number; rise: number; aZ: number; bZ: number; xL: number; xE: number; y0?: number; lo?: number; hi?: number }
 /** an opening through the wall between rooms a and b. `wall`: the way the wall runs ('x': an east-west wall);
     u0…u1 along it; pa, pb the two faces' planes (z of an east-west wall, x of a north-south one) */
 export interface Door { a: string; b: string; wall: 'x' | 'z'; u0: number; u1: number; pa: number; pb: number; h: number }

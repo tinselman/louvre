@@ -1,5 +1,7 @@
 /* stairwalk.mjs — headless: walk up the Escalier Henri II with the W key, turning at the landing, and out on the
-   second floor; then back down. Prints where you are, how high, which floor.   node tools/stairwalk.mjs */
+   second floor; then back down. Prints where you are, how high, which floor.   node tools/stairwalk.mjs
+   `node tools/stairwalk.mjs daru`: from the Palier (703) down the Daru stair to the ground floor, on to the Venus de
+   Milo's room, and back up. */
 import { createServer } from 'vite';
 import puppeteer from 'puppeteer-core';
 import { dirname, resolve } from 'node:path';
@@ -13,7 +15,8 @@ const page = await browser.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.setViewport({ width: 900, height: 600 });
-await page.goto(`${base}/?hud=0&at=145.5,-117.7,90,0,1`, { waitUntil: 'load' });
+const DARU = process.argv[2] === 'daru';
+await page.goto(`${base}/?hud=0&at=${DARU ? '99.5,-64.4,90,0,1' : '145.5,-117.7,90,0,1'}`, { waitUntil: 'load' });
 await page.waitForFunction('window.__gReady === true', { timeout: 60000 });
 const where = (label) => page.evaluate((label) => { const g = window.__g, p = g.player.pos; return `${label.padEnd(26)} x ${p.x.toFixed(1)} z ${p.z.toFixed(1)} eye ${p.y.toFixed(2)} floor ${g.floor()} room ${g.roomAt(p.x, p.z) ?? '—'}`; }, label);
 const walk = async (yawDeg, secs) => {
@@ -21,7 +24,26 @@ const walk = async (yawDeg, secs) => {
   await page.keyboard.down('KeyW'); await new Promise((r) => setTimeout(r, secs * 1000)); await page.keyboard.up('KeyW');
   await new Promise((r) => setTimeout(r, 400));
 };
-const out = [await where('start (passage, 1st)')];
+const out = [];
+if (DARU) {
+  out.push(await where('start (703, 1st floor)'));
+  await walk(90, 8.5); out.push(await where('down flight B, west'));
+  await walk(0, 1.9); out.push(await where('across the landing'));
+  await walk(-90, 10.5); out.push(await where('down flight A, out east'));
+  await page.evaluate(() => { const p = window.__g.player.pos; p.x = 99.2; p.z = -61.45; });
+  await walk(-90, 7.0); out.push(await where('east, Rotonde de Mars'));
+  await walk(-90, 3.0); out.push(await where('east, Salle de Diane'));
+  await page.evaluate(() => { window.__g.player.pos.z = -55.0; });
+  await walk(-90, 5.0); out.push(await where('east, the Venus de Milo'));
+  await page.evaluate(() => { const p = window.__g.player.pos; p.x = 99.2; p.z = -68.8; });
+  await walk(90, 9.5); out.push(await where('up flight A, west'));
+  await walk(180, 1.9); out.push(await where('across the landing'));
+  await walk(-90, 10.5); out.push(await where('up flight B, out east (703)'));
+  console.log(out.join('\n'));
+  if (errors.length) console.log('page errors:', errors.slice(0, 4));
+  await browser.close(); await server.close(); process.exit(0);
+}
+out.push(await where('start (passage, 1st)'));
 await walk(90, 6.5); out.push(await where('up flight A, west'));
 await walk(180, 1.6); out.push(await where('across the landing'));
 await walk(-90, 4.0); out.push(await where('up flight B, east'));

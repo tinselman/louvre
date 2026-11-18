@@ -16,7 +16,7 @@ FH = 8.0          # the second floor's floor, above the first's (Claude's stylis
 def room(id, name, rect, spring, top, ceiling='flat', sky=0.0, axis=None, hang=True, floor=1, **kw):
     x0, z0, x1, z1 = rect
     R.append(dict(id=id, name=name, x0=x0, z0=z0, x1=x1, z1=z1, spring=spring, top=top, ceiling=ceiling, sky=sky,
-                  axis=axis or ('x' if x1 - x0 >= z1 - z0 else 'z'), hang=hang, floor=floor, y=0.0 if floor == 1 else FH, **kw))
+                  axis=axis or ('x' if x1 - x0 >= z1 - z0 else 'z'), hang=hang, floor=floor, y={0: -FH, 1: 0.0, 2: FH}[floor], **kw))
 
 GG_Z = (-3.2, 8.4)
 room('719', 'Goya',                               (-286.0, -9.0, -259.0, 8.4), 8.0, 11.0, 'cove', 0.45)
@@ -28,7 +28,7 @@ room('710', 'Grande Galerie · 1st and 2nd bays',  (-37.1, *GG_Z[:1], 78.6, GG_Z
 room('708', 'Salon Carré',                         (79.6, -8.3, 103.2, 9.0), 10.0, 14.5, 'cove', 0.5)
 room('707', 'Salle Duchâtel',                      (94.6, -23.7, 103.2, -9.0), 6.0, 7.5, 'cove', 0.0)
 room('706', 'Salles Percier et Fontaine',          (94.8, -42.0, 103.2, -24.4), 5.5, 8.5, 'vault', 0.0, 'z')
-room('703', 'Salle 703',                           (96.0, -64.0, 102.4, -42.7), 6.5, 8.0, 'cove', 0.0, hang=False)
+room('703', 'Salle 703',                           (96.0, -70.7, 102.4, -42.7), 6.5, 8.0, 'cove', 0.0, hang=False)   # run on north to the Daru stair down
 room('704', "Rotonde d'Apollon",                   (103.2, -67.1, 114.3, -55.8), 7.0, 9.0, 'cove', 0.0)
 room('661', 'Salle des verres',                    (117.0, -64.0, 127.7, -51.3), 6.0, 7.5, 'cove', 0.0)
 room('705', "Galerie d'Apollon",                   (104.9, -55.1, 115.5, 11.1), 7.5, 12.0, 'vault', 0.0, 'z')
@@ -110,11 +110,25 @@ for rid, (name, (x0, z0, x1, z1)) in sorted(rows.items()):
 # plan — the first floor's walls run up to the second's floor, the second's go on up to a top-lit cove — and two
 # flights between: the first rises west from the first floor to a landing, the second back east to the second floor
 SX0, SZ0, SX1, SZ1 = 128.2, -119.6, 141.8, -111.4
-room('s1', 'Escalier Henri II', (SX0, SZ0, SX1, SZ1), FH, FH, 'none', 0.5, hang=False, floor=1, stair=True, wallTop=FH + 6.5)
-room('s2', 'Escalier Henri II', (SX0, SZ0, SX1, SZ1), 6.5, 8.0, 'cove', 0.5, hang=False, floor=2, stair=True, wallTop=FH + 6.5)
+room('s1', 'Escalier Henri II', (SX0, SZ0, SX1, SZ1), FH, FH, 'none', 0.5, hang=False, floor=1, stair=True, wallTop=FH + 6.5, wallBase=0.0)
+room('s2', 'Escalier Henri II', (SX0, SZ0, SX1, SZ1), 6.5, 8.0, 'cove', 0.5, hang=False, floor=2, stair=True, wallTop=FH + 6.5, wallBase=0.0)
 STAIRS = [dict(id='henri2', x0=SX0, z0=SZ0, x1=SX1, z1=SZ1, rise=FH,
                # band A (north, z0..aZ) climbs from the east end (xE) west to the landing (xL); band B (south) back east
-               aZ=-115.8, bZ=-115.2, xL=131.2, xE=140.3)]
+               aZ=-115.8, bZ=-115.2, xL=131.2, xE=140.3, y0=0.0, lo=1, hi=2)]
+
+# ---- the ground floor, only as far as the Venus de Milo (2026-11-17, his "Yes, build it") -------------------------
+# A stair down beside the Victory's hall, built as the Henri II (Claude's: the real Daru staircase falls west from her
+# landing, where our hall is), north of it and leaving east on both floors: into the Palier (703, run on north) above,
+# into a hall under it below. Then OpenStreetMap's level 0: the Rotonde de Mars (under the Rotonde d'Apollon), the
+# Salle de Diane (under the Salle des verres) and the Salle de la Vénus de Milo (345). Heights Claude's.
+DX0, DZ0, DX1, DZ1 = 81.7, -70.7, 95.3, -62.5
+room('dz0', 'Escalier Daru · up to the Winged Victory', (DX0, DZ0, DX1, DZ1), FH, FH, 'none', 0.5, hang=False, floor=0, stair=True, wallTop=6.5, wallBase=-FH)
+room('dz1', 'Escalier Daru · down to the Venus de Milo', (DX0, DZ0, DX1, DZ1), 6.5, 8.0, 'cove', 0.5, hang=False, floor=1, stair=True, wallTop=6.5, wallBase=-FH)
+STAIRS.append(dict(id='daru', x0=DX0, z0=DZ0, x1=DX1, z1=DZ1, rise=FH, aZ=-66.9, bZ=-66.3, xL=84.7, xE=93.8, y0=-FH, lo=0, hi=1))
+room('g703', 'Escalier Daru · foot',               (96.0, -70.7, 102.4, -42.7), 5.8, 7.0, 'cove', 0.0, hang=False, floor=0)
+room('mars', 'Rotonde de Mars',                    (103.2, -67.1, 114.3, -55.8), 6.0, 7.2, 'cove', 0.0, hang=False, floor=0)
+room('diane', 'Salle de Diane',                    (117.0, -64.0, 127.7, -51.3), 5.6, 7.0, 'cove', 0.0, hang=False, floor=0)
+room('345', 'Salle de la Vénus de Milo',          (128.4, -59.0, 150.0, -41.0), 5.6, 7.2, 'vault', 0.0, 'x', hang=False, floor=0)
 
 # keep a wall at least WALL thick wherever two rooms face each other
 by = {r['id']: r for r in R}
@@ -173,7 +187,7 @@ door('daru', '703', w=4.0, h=5.6)
 door('708', '707', w=4.0, h=5.0)
 door('707', '706', w=4.0, h=5.0)
 door('706', '703', w=4.0, h=5.0)
-door('703', '704', w=4.0, h=5.6)
+door('703', '704', w=4.0, h=5.6, at=-59.9)      # (where it was before 703 ran on north)
 door('704', '705', w=5.0, h=6.0)
 door('704', '661', w=3.6, h=5.0)
 door('708', '705', w=4.0, h=5.6, at=4.0)
@@ -183,6 +197,12 @@ door('662', '663', w=4.0, h=4.6)
 door('663', 'c1', w=3.0, h=3.2, at=145.0)
 door('c1', 's1', w=3.0, h=3.2, at=-117.7)
 door('c2', 's2', w=3.0, h=3.2, at=-113.3)
+# the Daru stair: in at its foot below (the north flight's east end), out at its head above (the south flight's)
+door('dz0', 'g703', w=3.0, h=3.4, at=-68.8)
+door('dz1', '703', w=3.0, h=3.2, at=-64.4)
+door('g703', 'mars', w=4.0, h=5.0)
+door('mars', 'diane', w=3.6, h=4.6)
+door('diane', '345', w=3.6, h=4.6)
 # the second floor: every two rooms that face each other across a wall over 2.2 m of it get a doorway in the middle
 # (Claude's: OpenStreetMap doesn't map the doorways). Wider where the wall is long, as tall as the lower room allows.
 F2 = [r for r in R if r['floor'] == 2 and not r.get('stair')]
@@ -218,7 +238,7 @@ print(len(R), 'rooms', len(D), 'doors', len(W), 'free walls')
 # every room reachable from the start?
 adj = {r['id']: set() for r in R}
 for d in D: adj[d['a']].add(d['b']); adj[d['b']].add(d['a'])
-adj['s1'].add('s2'); adj['s2'].add('s1')
+adj['s1'].add('s2'); adj['s2'].add('s1'); adj['dz0'].add('dz1'); adj['dz1'].add('dz0')
 seen, todo = {'708'}, ['708']
 while todo:
     for n in adj[todo.pop()]:

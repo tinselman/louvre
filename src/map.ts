@@ -5,7 +5,8 @@
    Drawn on a canvas, north up (the frame's x east, z south toward the Seine), redrawn only while it's open. */
 import type { Building } from './model';
 
-const FLOOR_NAME: Record<number, string> = { 1: 'First floor · Denon', 2: 'Second floor · Richelieu and Sully' };
+const FLOOR_NAME: Record<number, string> = { 0: 'Ground floor · the Venus de Milo', 1: 'First floor · Denon', 2: 'Second floor · Richelieu and Sully' };
+const ON: Record<number, string> = { 0: 'ground', 1: 'first', 2: 'second' };
 const RED = '#d8231b';
 
 export class FloorMap {
@@ -36,7 +37,7 @@ export class FloorMap {
     const tabs = document.createElement('div'); tabs.className = 'map-tabs';
     for (const f of [...new Set(B.rooms.map((r) => r.floor))].sort()) {
       const t = document.createElement('button');
-      t.textContent = f === 1 ? '1st floor' : f === 2 ? '2nd floor' : `Floor ${f}`;
+      t.textContent = f === 0 ? 'Ground floor' : f === 1 ? '1st floor' : f === 2 ? '2nd floor' : `Floor ${f}`;
       t.dataset.floor = String(f);
       t.addEventListener('click', (e) => { e.stopPropagation(); this.chosen = f; this.draw(true); });
       tabs.appendChild(t); this.tabs.push(t);
@@ -112,6 +113,7 @@ export class FloorMap {
     }
     // the stair's steps
     for (const s of this.B.stairs ?? []) {
+      if (f !== (s.lo ?? 1) && f !== (s.hi ?? 2)) continue;
       g.strokeStyle = '#b4b0a7'; g.lineWidth = 0.8;
       for (let x = s.xL; x <= s.xE + 1e-6; x += (s.xE - s.xL) / 10) {
         const [a, b0] = P(x, s.z0), [, b1] = P(x, s.z1);
@@ -130,9 +132,11 @@ export class FloorMap {
       g.fillText(r.id, a, b);
     }
     for (const s of this.B.stairs ?? []) {
+      const lo = s.lo ?? 1, hi = s.hi ?? 2;
+      if (f !== lo && f !== hi) continue;
       const [a, b] = P(s.x0 - 1, (s.z0 + s.z1) / 2);
       g.textAlign = 'right'; g.fillStyle = '#4a4844';
-      g.fillText(f === 1 ? 'stairs up ↑' : 'stairs down ↓', a, b);
+      g.fillText(f === lo ? 'stairs up ↑' : 'stairs down ↓', a, b);
       g.textAlign = 'center';
     }
     // you
@@ -151,7 +155,7 @@ export class FloorMap {
     }
     const where = room ? (/^\d+$/.test(room.id) ? `${room.id} · ${room.name}` : room.name) : '';
     this.here.textContent = (this.me.floor === f ? `${FLOOR_NAME[f] ?? ''}${where ? ' — you are in ' + where : ''}`
-      : `${FLOOR_NAME[f] ?? ''} — you are on the ${this.me.floor === 1 ? 'first' : 'second'} floor`);
+      : `${FLOOR_NAME[f] ?? ''} — you are on the ${ON[this.me.floor] ?? ''} floor`);
   }
 
   get floorShown() { return this.shown; }

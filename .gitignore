@@ -10,3 +10,16 @@ public/art/*-raw
 shots/
 # the visitors' photos as they were, before tools/square.py straightened them (kept here to run it again)
 source/art-orig/
+# photos fetched for photogrammetry (tools/sculpt_photos.py) and what Object Capture makes of them
+source/scans/*/photos/
+source/scans/*/work/
+# the photo-built Venus test (two of its photos are GFDL-only: never published) and its comparison sheet
+source/scans/venus/venus-test.glb
+source/scans/venus/compare.jpg
+source/scans/venus/retry.sh
+source/scans/venus/stl/
+# the compiled photogrammetry tools (swiftc them from tools/) and their logs
+source/scans/capture
+source/scans/lift
+source/scans/*.log
+source/scans/venus/*.log

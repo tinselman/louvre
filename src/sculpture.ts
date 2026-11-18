@@ -24,6 +24,8 @@ export interface Sculpture {
   colour: string;                              // its stone's colour (the scan gives the detail, this the hue)
   /** what it stands on, drawn simply where the scan hasn't it (the Victory's ship): height, length, beam, colour */
   ship?: { h: number; base: number; length: number; beam: number; colour: string; at: number };
+  /** or a plain plinth (the Venus de Milo's): height, width, depth, colour */
+  plinth?: { h: number; w: number; d: number; colour: string };
   credit: string;
 }
 
@@ -156,7 +158,9 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
         const m = o as THREE.Mesh;
         if (!m.isMesh) return;
         const src = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.MeshStandardMaterial;
-        const mat = new THREE.MeshStandardMaterial({ map: src.map ?? null, normalMap: src.normalMap ?? null, roughness: 0.62, metalness: 0 });
+        // (a scan without a colour map — the Venus's — is the marble's colour all over; its shape and the light do the rest)
+        const mat = new THREE.MeshStandardMaterial({ map: src.map ?? null, normalMap: src.normalMap ?? null, roughness: 0.62, metalness: 0,
+          color: src.map ? 0xffffff : new THREE.Color(s.colour) });
         if (mat.map) mat.map.colorSpace = THREE.SRGBColorSpace;
         mat.onBeforeCompile = (sh) => {
           Object.assign(sh.uniforms, uniforms);
@@ -172,7 +176,7 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
       holder.add(model);
       holder.scale.setScalar(k);
       model.position.set(-feet.x, -lo, -feet.z);
-      holder.position.set(0, s.ship ? s.ship.h + s.ship.base : 0, s.ship ? s.ship.at : 0);
+      holder.position.set(0, s.ship ? s.ship.h + s.ship.base : s.plinth ? s.plinth.h : 0, s.ship ? s.ship.at : 0);
       // the whole: its middle (for the focus) halfway up
       const group = new THREE.Group();
       const centre = new THREE.Object3D();
@@ -181,6 +185,12 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
       group.rotation.y = THREE.MathUtils.degToRad(s.place.yaw);
       group.add(holder);
       if (s.ship) group.add(shipGeometry(s.ship));
+      if (s.plinth) {
+        const p = new THREE.Mesh(new THREE.BoxGeometry(s.plinth.w, s.plinth.h, s.plinth.d),
+          new THREE.MeshStandardMaterial({ color: new THREE.Color(s.plinth.colour), roughness: 0.7 }));
+        p.position.y = s.plinth.h / 2;
+        group.add(p);
+      }
       group.add(footShadow(s.w, s.depth));
       // light from the skylight overhead, a little forward of it (in the scene itself, always on: a light that came
       // and went with its floor would have every lit material rebuilt at each change of floor)
@@ -196,7 +206,7 @@ export function loadSculptures(list: Sculpture[], baseOf: (floor: number) => num
       stand.add(post, face);
       stand.position.set(s.w / 2 + 0.7, 0, s.depth / 2 + 0.6);
       group.add(stand);
-      centre.position.set(s.place.x, base + s.height / 2, s.place.z);
+      centre.position.set(s.place.x, base + (s.plinth?.h ?? 0) + s.height / 2, s.place.z);
       const work = { id: s.id, title: s.title, fr: s.fr, artist: s.artist, date: s.date, year: 0, medium: s.medium, w: s.w, h: s.height, fw: null, room: s.room, inv: s.inv, q: '', img: '' } as Work;
       const pic = {
         work, item: null as never, placed: { normal: [Math.sin(group.rotation.y), 0, Math.cos(group.rotation.y)] as [number, number, number] },

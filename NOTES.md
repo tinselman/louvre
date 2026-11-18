@@ -190,3 +190,35 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
 - Studio c01a695 → main 3c58293 (version mwlbuebc). Dropped index-BIhouE2z.js; kept index-DXn9K2lp.js (the build
   before) for stale pages — drop it next publish. Live check: the straightened files served, `requests.mjs` at the
   Victory 160 responses, none bad.
+
+## Sculpture from photographs — the Venus de Milo test (2026-11-17, his "can you retrieve sculptures from photos?" → "Yes, try it")
+- `tools/sculpt_photos.py venus <Commons categories…>` lists every photo of her with photographer + licence →
+  source/scans/venus/list.json and fetches the photographs (1920 px thumbnails, one at a time) → photos/ (not committed).
+- `tools/capture.swift` = Apple's Object Capture (RealityKit PhotogrammetrySession), unordered; `tools/lift.swift` cuts
+  the subject out of each photo onto black (Vision's foreground-instance mask, the tallest subject); `tools/obj2glb.py`
+  OBJ → glb (npx obj2gltf was refused by the permission check).
+- What happened: Object Capture is NOT repeatable on visitors' photos. 182 colour photos once gave the whole statue
+  (front, sides, back; patchy colour) — but the same set failed when run again; asking for camera poses (`.poses`)
+  made runs fail (now only with POSES=1); without the two GFDL-only photos it never worked; cut-out photos failed
+  too; one run made the room's marble wall and a ghost of her. Two of those 182 are GFDL 1.2 only — incompatible with
+  CC BY-SA, so that test model (source/scans/venus/venus-test.glb) is never published.
+- What's used instead: Wikidata (P4896) lists a real 3D scan on Commons, "Scan the World - Venus de Milo.stl"
+  (CC BY-SA 4.0, 607k triangles, cm). `tools/stl2glb.py` → glb (welded, smooth normals, z-up → y-up), then
+  `npx gltf-transform optimize … --compress meshopt --simplify true --simplify-ratio 0.3 --simplify-error 0.0003`
+  → public/models/venus.glb, 0.75 MB. Of the 2,917 Louvre sculptures on Wikidata, she is the only one with a Commons model.
+
+## The ground floor and the Daru stair (2026-11-17, his "Yes, build it")
+- Floor 0 (y −8): the Daru stair down, its foot hall (g703, under the Palier), the Rotonde de Mars (under the Rotonde
+  d'Apollon), the Salle de Diane (under the Salle des verres) and 345, the Salle de la Vénus de Milo — OpenStreetMap
+  level 0 (rects in tools/building.py). Heights Claude's. Nothing else of the ground floor is built.
+- The stair (`daru` in STAIRS, rooms dz0/dz1): built as the Henri II (two flights, a landing, out east on both floors),
+  north of the Victory's hall: from the Palier (703, run on north to z −70.7; its door to 704 pinned where it was)
+  down to the foot hall. Claude's placing — the real Daru staircase falls west from her landing, where our hall is.
+  Stairs now carry y0 / lo / hi (Henri II: 0, 1, 2; Daru: −8, 0, 1); stair rooms wallBase. Door signs read
+  "Escalier Daru · down to the Venus de Milo" / "· up to the Winged Victory".
+- She stands at x 143, z −51.5, facing west to the door from Diane, on a plain plinth 0.55 m (`plinth` in
+  sculptures.json; drawn simply): 204 cm (the Louvre's record), the scan 2.156 m with its own base; marble colour
+  all over (the scan has no colour map). Credit on her label and the wall title.
+- `?at=x,z,yaw,pitch,0` now works (floor 0 was read as "no floor"). `node tools/stairwalk.mjs daru` walks 703 → down →
+  the foot hall → Mars → Diane → her, and back up. fps.mjs has five ground-floor/stair spots (1.6–4.4 ms).
+- check.mjs PASS; stairwalk (Henri II) unchanged; WebKit renders her room and the stair, no errors.

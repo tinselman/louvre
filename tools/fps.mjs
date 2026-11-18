@@ -10,7 +10,7 @@ await server.listen();
 const base = server.resolvedUrls.local[0].replace(/\/$/, '');
 const browser = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
   args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--disable-gpu-vsync', '--disable-frame-rate-limit'] });
-for (const at of ['', '60,2.6,90,0', '-150,2.6,-90,0', '-3,-30,180,0', '70,-25,0,0', '2.6,-240,180,0,2', '-40,-204,90,0,2', '140,-62,90,0,2', '278,-120,180,0,2', '129.6,-113.3,-90,8,1', '77,-47,-52,14,1', '79.5,-55.5,-120,22,1']) {
+for (const at of ['', '60,2.6,90,0', '-150,2.6,-90,0', '-3,-30,180,0', '70,-25,0,0', '2.6,-240,180,0,2', '-40,-204,90,0,2', '140,-62,90,0,2', '278,-120,180,0,2', '129.6,-113.3,-90,8,1', '77,-47,-52,14,1', '79.5,-55.5,-120,22,1', '131.5,-51.5,-90,6,0', '139.5,-49,-60,10,0', '108.7,-61.4,-90,4,0', '100.5,-64.4,90,-12,1', '86,-68.8,90,-20,0']) {
   const page = await browser.newPage();
   await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: dpr });
   await page.goto(`${base}/?hud=0${at ? '&at=' + at : ''}`, { waitUntil: 'load' });

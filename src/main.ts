@@ -102,7 +102,7 @@ async function start() {
     title: 'Musée du Louvre', sub: 'The Paintings · Denon, Richelieu and Sully',
     how: touchOnly ? 'Drag the floor to walk, a wall to turn · tap a painting to see it whole'
       : 'Click to look with the mouse · W A S D to walk · walk up to a painting, click to see it whole · M for the map',
-    credit: 'Rooms after OpenStreetMap’s indoor map (© OpenStreetMap contributors). Which room each painting hangs in, and the words\non the labels: the musée du Louvre’s collections database (Etalab Open Licence). Photographs: Wikimedia Commons,\npublic domain. Within each room the paintings are hung by date; the walls, ceilings and frames are simplified, all in white.\nThe Winged Victory: after “Winged Victory of Samothrace” by CosmoWenman (Sketchfab, CC BY 4.0), a scan of the Basel cast, coloured as her marble.',
+    credit: 'Rooms after OpenStreetMap’s indoor map (© OpenStreetMap contributors). Which room each painting hangs in, and the words\non the labels: the musée du Louvre’s collections database (Etalab Open Licence). Photographs: Wikimedia Commons,\npublic domain. Within each room the paintings are hung by date; the walls, ceilings and frames are simplified, all in white.\nThe Winged Victory: after “Winged Victory of Samothrace” by CosmoWenman (Sketchfab, CC BY 4.0), a scan of the Basel cast, coloured as her marble.\nThe Venus de Milo (ground floor, down the stair beside the Victory): after “Scan the World – Venus de Milo” (Wikimedia Commons, CC BY-SA 4.0).',
   }] : [];
   // each floor hung on its own
   const items: Item[] = [], unplaced: Work[] = [];
@@ -192,7 +192,7 @@ async function start() {
   const at = params.get('at');
   if (at) {
     const [x, z, yaw, pitch, fl] = at.split(',').map(Number);
-    if (fl && arches.has(fl)) setFloor(fl);
+    if (fl != null && arches.has(fl)) setFloor(fl);
     player.pos.set(x, EYE, z);
     player.yaw = THREE.MathUtils.degToRad(yaw || 0);
     player.pitch = THREE.MathUtils.degToRad(pitch || 0);
@@ -205,9 +205,10 @@ async function start() {
     const g = ground(player.pos.x, player.pos.z);
     inStair = !!g.stair;
     if (g.stair) {
-      const half = g.stair.rise / 2, upper = player.pos.z > (g.stair.aZ + g.stair.bZ) / 2;
-      if (upper && g.y > half + 0.3 && cur !== 2) setFloor(2);
-      if (!upper && g.y < half - 0.3 && cur !== 1) setFloor(1);
+      const s = g.stair, mid = (s.y0 ?? 0) + s.rise / 2, upper = player.pos.z > (s.aZ + s.bZ) / 2;
+      const lo = s.lo ?? 1, hi = s.hi ?? 2;
+      if (upper && g.y > mid + 0.3 && cur !== hi) setFloor(hi);
+      if (!upper && g.y < mid - 0.3 && cur !== lo) setFloor(lo);
     }
     const want = g.y + EYE;
     player.pos.y += (want - player.pos.y) * (dt > 0 ? Math.min(1, dt * 14) : 1);
