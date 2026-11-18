@@ -239,3 +239,7 @@ don't put Robyn's email in it). tools/images.py now waits as asked and goes one 
   tint shows which one you're on.
 - `node tools/mapclick.mjs [out-dir]`: clicks every room's middle on its floor's tab (162 of 162 right), the four
   stair ends, a corner; shots map-hover.png / map-landed.png. WebKit: 345, 711, s2, dz1 right, no errors. check.mjs PASS.
+
+## Published 2026-11-18 (his "Yes, publish") — the clickable map
+- Studio fa10d3c → main 861ebe4 (version mwm8moit). Dropped index-ChV7oqjx.js; kept index-B08W4VRD.js (the build
+  before) for stale pages — drop it next publish.
